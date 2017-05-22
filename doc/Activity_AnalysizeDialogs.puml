@@ -1,0 +1,11 @@
+@startuml
+(*)  --> "user dialogs"
+--> "split into input and output pairs"
+If "input is verbose" then
+--> [Yes] "turn on verbosity"
+--> "run command"
+else
+--> "run command"
+Endif
+-->(*)
+@enduml
