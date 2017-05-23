@@ -10,11 +10,11 @@ use Reinforcement NN to study talk:DDPG?
 
 keras-rl
 
-use auto_ml to auto analysize conversations
+use itchat to crawl conversation corpus
 
-front use itchat
+use auto_ml to auto analysize conversations
 
 back service chatterbot
 
-演示地址：
+Demo:
 http://abot.butterfly.mopaasapp.com/
