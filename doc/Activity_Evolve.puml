@@ -1,0 +1,11 @@
+@startuml
+(*)  --> "user dialogs(use itchat crawl from qq or wechat)"
+--> "split into input and output pairs"
+If "input is verbose" then
+--> [Yes] "turn on verbosity"
+--> "run command"
+else
+--> "run command"
+Endif
+-->(*)
+@enduml
