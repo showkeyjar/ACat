@@ -1,5 +1,5 @@
 @startuml
-(*)  --> "user dialogs(use itchat crawl from wechat)"
+(*)  --> "user dialogs(use itchat crawl from qq or wechat)"
 --> "split into input and output pairs"
 If "input is verbose" then
 --> [Yes] "turn on verbosity"
