@@ -14,6 +14,8 @@ use itchat to crawl conversation corpus
 
 use auto_ml to auto analysize conversations
 
+use tpot to auto generate pipline
+
 back service chatterbot
 
 Demo:
