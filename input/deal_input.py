@@ -16,3 +16,4 @@ def deal_video(stream):
     """
     处理媒体
     """
+    pass
