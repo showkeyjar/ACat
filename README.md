@@ -1,14 +1,10 @@
-ABot is a smart chatbot
+# ACat
 
-she can talk with you by REST API
+Android应用 另一只猫
 
-it based on AI tech
+使用ABot原理建立有意思的端上应用
 
-test by:ParlAI
-
-use Reinforcement NN to study talk:DDPG?
-
-keras-rl
+应用到汤姆猫
 
 use itchat to crawl conversation corpus
 
@@ -17,7 +13,3 @@ use auto_ml to auto analysize conversations
 use tpot to auto generate pipline
 
 back service chatterbot
-
-Demo:
-
-http://abot.butterfly.mopaasapp.com/
