@@ -3,7 +3,6 @@ package com.another.tom
 import android.graphics.Bitmap
 import android.graphics.Rect
 import android.graphics.drawable.BitmapDrawable
-import android.media.AudioManager
 import android.media.SoundPool
 import android.os.Bundle
 import android.util.Log
@@ -13,6 +12,7 @@ import android.view.SurfaceView
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.res.ResourcesCompat
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -88,12 +88,12 @@ class MainActivity : AppCompatActivity() {
 
         //通过id查找视图 只会在上面设置的内容中查找  surfaceView 特点必须自己先创建完 才能执行 ，可以通过句柄得知是否初始化完成
         sv = findViewById<View>(R.id.surface) as SurfaceView
-
+        holder = sv!!.holder as SurfaceHolder
         //添加回调
-        sv!!.holder.addCallback(callback)
+        (holder as SurfaceHolder).addCallback(callback)
 
         //参数1 最多几个声音 参数2 声音类型 AudioManager是声音管理 各种静态类型
-        soundPool = SoundPool(7, AudioManager.STREAM_MUSIC, 1)
+        soundPool = SoundPool.Builder().setMaxStreams(7).build()
         //遍历音频资源数组 加载到声音池
         Log.e("tag", "======init=========$soundPool")
         for (a in resids) {
@@ -154,8 +154,7 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getBitmap(id: Int): Bitmap {
         //获取到资源中的可绘制资源(图片) 参数 资源id
-        val drawable = resources.getDrawable(id)
-
+        val drawable = ResourcesCompat.getDrawable(getResources(), id, null)
         //子类型； Drawable 有多种类型的 例如 颜色绘制的图
         val bmpDaw = drawable as BitmapDrawable
 
