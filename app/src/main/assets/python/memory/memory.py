@@ -7,6 +7,8 @@ import numpy as np
 使用3d网格代表大脑网络
 
 只接受两种输入: 视频 + 音频
+
+神经元的多态
 """
 
 
@@ -34,7 +36,7 @@ class Brain():
         while(cap.isOpened()):
             ret, frame = cap.read()
             if ret==True:
-                # todo 这里写入大脑array
+                # todo 这里写入大脑 array
                 # out.write(frame)
                 frame2cell(frame)
                 cv2.imshow('frame', frame)

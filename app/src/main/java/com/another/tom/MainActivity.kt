@@ -1,12 +1,12 @@
 package com.another.tom
 
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Rect
 import android.graphics.drawable.BitmapDrawable
 import android.hardware.camera2.CameraAccessException
+import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.media.Image
 import android.media.ImageReader
@@ -14,57 +14,45 @@ import android.media.SoundPool
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import android.util.Size
 import android.view.*
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
-import java.util.*
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-class MainActivity : AppCompatActivity(), ImageReader.OnImageAvailableListener{
-    private var sv: SurfaceView? = null
 
+class MainActivity : AppCompatActivity(){
+    private var sv: SurfaceView? = null
     //SurfaceView的句柄 控制 SurfaceView ； 持有，查找 等
     private var holder: SurfaceHolder? = null
-
     //矩形
     private var dst: Rect? = null
-
     //第一项 cymbal
     private val cymbal = arrayOf<Any>("cymbal_", 13)
-
     //第二项 scratch
     private val scratch = arrayOf<Any>("scratch_", 56)
-
     //第三项 pie
     private val pie = arrayOf<Any>("pie_", 24)
-
     //第四项 fart
     private val fart = arrayOf<Any>("fart_", 28)
-
     //第五项 drink
     private val drink = arrayOf<Any>("drink_", 81)
-
     //第六项 eat
     private val eat = arrayOf<Any>("eat_", 40)
-
     //踩脚
     private val knockout = arrayOf<Any>("knockout_", 81)
-
     //临时图片
     var temp: Array<Any>? = null
-
     //声音池 短声音播放
     private var soundPool: SoundPool? = null
-
     //是否正在播放动画
     private var isPlaying = false
-
     //声音池id集合
     private var soundIds: ArrayList<Int>? = ArrayList<Int>()
-
     //声音资源文件 顺序要和图片 顺序一致
     private val resids = intArrayOf(
         R.raw.cymbal,
@@ -75,113 +63,17 @@ class MainActivity : AppCompatActivity(), ImageReader.OnImageAvailableListener{
         R.raw.eat,
         R.raw.knockout
     )
-
     //音频池的id
     private var index = 0
-
     //每个项的声音延迟  毫秒  按每项的顺序
     private val delay = intArrayOf(0, 2000, 1000, 200, 5000, 2000, 0)
+    private lateinit var cameraExecutor: ExecutorService
 
-    var previewHeight = 0;
-    var previewWidth = 0
-    var sensorOrientation = 0;
+    private fun startCamera() {}
 
-    // https://hamzaasif-mobileml.medium.com/getting-frames-of-live-camera-footage-as-bitmaps-in-android-using-camera2-api-kotlin-40ba8d3afc76
-    //TODO fragment which show llive footage from camera
-    protected fun setFragment() {
-        val manager =
-            getSystemService(Context.CAMERA_SERVICE) as CameraManager
-        var cameraId: String? = null
-        try {
-            cameraId = manager.cameraIdList[0]
-        } catch (e: CameraAccessException) {
-            e.printStackTrace()
-        }
-        // 接收摄像头视频流
-        CameraUtils.setCamera(cameraId)
-    }
-
-    private var isProcessingFrame = false
-    private val yuvBytes = arrayOfNulls<ByteArray>(3)
-    private var rgbBytes: IntArray? = null
-    private var yRowStride = 0
-    private var postInferenceCallback: Runnable? = null
-    private var imageConverter: Runnable? = null
-    private var rgbFrameBitmap: Bitmap? = null
-
-    override fun onImageAvailable(reader: ImageReader) {
-        // We need wait until we have some size from onPreviewSizeChosen
-        if (previewWidth == 0 || previewHeight == 0) {
-            return
-        }
-        if (rgbBytes == null) {
-            rgbBytes = IntArray(previewWidth * previewHeight)
-        }
-        try {
-            val image = reader.acquireLatestImage() ?: return
-            if (isProcessingFrame) {
-                image.close()
-                return
-            }
-            isProcessingFrame = true
-            val planes = image.planes
-            fillBytes(planes, yuvBytes)
-            yRowStride = planes[0].rowStride
-            val uvRowStride = planes[1].rowStride
-            val uvPixelStride = planes[1].pixelStride
-            imageConverter = Runnable {
-                ImageUtils.convertYUV420ToARGB8888(
-                    yuvBytes[0]!!,
-                    yuvBytes[1]!!,
-                    yuvBytes[2]!!,
-                    previewWidth,
-                    previewHeight,
-                    yRowStride,
-                    uvRowStride,
-                    uvPixelStride,
-                    rgbBytes!!
-                )
-            }
-            postInferenceCallback = Runnable {
-                image.close()
-                isProcessingFrame = false
-            }
-            processImage()
-        } catch (e: Exception) {
-            return
-        }
-    }
-
-
-    private fun processImage() {
-        imageConverter!!.run()
-        rgbFrameBitmap = Bitmap.createBitmap(previewWidth, previewHeight, Bitmap.Config.ARGB_8888)
-        rgbFrameBitmap?.setPixels(rgbBytes, 0, previewWidth, 0, 0, previewWidth, previewHeight)
-        postInferenceCallback!!.run()
-    }
-
-    protected fun fillBytes(
-        planes: Array<Image.Plane>,
-        yuvBytes: Array<ByteArray?>
-    ) {
-        // Because of the variable row stride it's not possible to know in
-        // advance the actual necessary dimensions of the yuv planes.
-        for (i in planes.indices) {
-            val buffer = planes[i].buffer
-            if (yuvBytes[i] == null) {
-                yuvBytes[i] = ByteArray(buffer.capacity())
-            }
-            buffer[yuvBytes[i]]
-        }
-    }
-
-    protected fun getScreenOrientation(): Int {
-        return when (windowManager.defaultDisplay.rotation) {
-            Surface.ROTATION_270 -> 270
-            Surface.ROTATION_180 -> 180
-            Surface.ROTATION_90 -> 90
-            else -> 0
-        }
+    private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
+        ContextCompat.checkSelfPermission(
+            baseContext, it) == PackageManager.PERMISSION_GRANTED
     }
 
     /**
@@ -213,31 +105,51 @@ class MainActivity : AppCompatActivity(), ImageReader.OnImageAvailableListener{
             soundIds?.add(id)
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_DENIED
-            ) {
-                val permission = arrayOf(
-                    Manifest.permission.CAMERA
-                )
-                requestPermissions(permission, 1122)
+        // Request camera permissions
+        if (allPermissionsGranted()) {
+            startCamera()
+        } else {
+            ActivityCompat.requestPermissions(
+                this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
+        }
+
+        cameraExecutor = Executors.newSingleThreadExecutor()
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int, permissions: Array<String>, grantResults:
+        IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_CODE_PERMISSIONS) {
+            if (allPermissionsGranted()) {
+                startCamera()
             } else {
-                //TODO show live camera footage
-                setFragment()
+                Toast.makeText(this,
+                    "Permissions not granted by the user.",
+                    Toast.LENGTH_SHORT).show()
+                finish()
             }
-        }else{
-            //TODO show live camera footage
-            setFragment()
         }
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String?>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            //TODO show live camera footage
-            setFragment()
-        } else {
-            finish()
-        }
+    override fun onDestroy() {
+        super.onDestroy()
+        cameraExecutor.shutdown()
+    }
+
+    companion object {
+        private const val TAG = "CameraXApp"
+        private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
+        private const val REQUEST_CODE_PERMISSIONS = 10
+        private val REQUIRED_PERMISSIONS =
+            mutableListOf (
+                Manifest.permission.CAMERA,
+                Manifest.permission.RECORD_AUDIO
+            ).apply {
+                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                    add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                }
+            }.toTypedArray()
     }
 
     /**
