@@ -1,6 +1,7 @@
 package com.another.tom
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Rect
@@ -8,6 +9,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.media.SoundPool
 import android.os.Build
 import android.os.Bundle
+import android.util.Base64
 import android.util.Log
 import android.view.*
 import android.widget.Toast
@@ -18,6 +20,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import com.another.tom.databinding.ActivityMainBinding
+import com.chaquo.python.Python
+import com.chaquo.python.android.AndroidPlatform
 import java.nio.ByteBuffer
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -78,7 +82,9 @@ class MainActivity : AppCompatActivity(){
     private lateinit var viewBinding: ActivityMainBinding
     private lateinit var cameraExecutor: ExecutorService
 
-    private class LuminosityAnalyzer(private val listener: LumaListener) : ImageAnalysis.Analyzer {
+    private class LuminosityAnalyzer(private val listener: LumaListener, private val con:Context) : ImageAnalysis.Analyzer {
+        private lateinit var py: Python
+        // private lateinit var con: Context
 
         private fun ByteBuffer.toByteArray(): ByteArray {
             rewind()    // Rewind the buffer to zero
@@ -87,12 +93,33 @@ class MainActivity : AppCompatActivity(){
             return data // Return the byte array
         }
 
+        private fun bitmapToString(inputFace: ByteArray):String{
+            val encodedString: String = Base64.encodeToString(inputFace, Base64.DEFAULT)
+            return encodedString
+        }
+
         override fun analyze(image: ImageProxy) {
+            if (! Python.isStarted()) {
+                Python.start(AndroidPlatform(con))
+                Log.i("Python","python start")
+            }
+            if(!::py.isInitialized){
+                py = Python.getInstance()
+            }
+            var react = 0
             val buffer = image.planes[0].buffer
             val data = buffer.toByteArray()
-            val pixels = data.map { it.toInt() and 0xFF }
-            val luma = pixels.average()
-            listener(luma)
+            // 将图像数据发送给python
+            var encodingStr = bitmapToString(data)
+            try {
+                react = py.getModule("cat").callAttr("see", encodingStr)
+                    .toJava(Int::class.java)
+            }catch (e: Exception) {
+                Log.i("error", e.toString())
+            }
+            // val pixels = data.map { it.toInt() and 0xFF }
+            // val luma = pixels.average()
+            listener(react.toDouble())
             image.close()
         }
     }
@@ -114,9 +141,9 @@ class MainActivity : AppCompatActivity(){
             val imageAnalyzer = ImageAnalysis.Builder()
                 .build()
                 .also {
-                    it.setAnalyzer(cameraExecutor, LuminosityAnalyzer { luma ->
+                    it.setAnalyzer(cameraExecutor, LuminosityAnalyzer({ luma ->
                         Log.d(TAG, "Average luminosity: $luma")
-                    })
+                    }, applicationContext))
                 }
 
             // Select back camera as a default

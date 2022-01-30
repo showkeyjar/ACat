@@ -26,7 +26,7 @@ android {
         python {
             buildPython "D:/tools/anaconda3/envs/beauty/python.exe"
             pip {
-                install "numpy"
+                install "opencv-python"
             }
         }
     }
