@@ -20,6 +20,8 @@ def see(str_data):
     except Exception as e:
         print(e)
     # todo 输入数据到 brain
+    print("yes I see a image ", img.shape)
+    return 1
 
 
 if __name__ == '__main__':
