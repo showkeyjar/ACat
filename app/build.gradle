@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'kotlin-android'
+    id 'com.chaquo.python'
 }
 
 android {
@@ -14,6 +15,20 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            // abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"  //full
+            // abiFilters "x86"  //debug
+            // abiFilters "armeabi-v7a", "arm64-v8a" //release
+            abiFilters "armeabi-v7a" //run
+        }
+
+        python {
+            buildPython "D:/tools/anaconda3/envs/beauty/python.exe"
+            pip {
+                install "numpy"
+            }
+        }
     }
 
     buildTypes {

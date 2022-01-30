@@ -1,10 +1,10 @@
 # ACat
 
-Android应用 另一只猫
+Android app Another Tomcat
 
-使用ABot原理建立有意思的端上应用
+use neural network to procees input and output
 
-应用到汤姆猫
+apply to cat avatar
 
 use itchat to crawl conversation corpus
 
