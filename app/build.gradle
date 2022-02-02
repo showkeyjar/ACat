@@ -31,6 +31,15 @@ android {
         }
     }
 
+    sourceSets {
+        main{
+            // Android code dir
+            setRoot "src/main"
+            // Python code dir
+            python.srcDirs = ["src/main/assets/python"]
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false

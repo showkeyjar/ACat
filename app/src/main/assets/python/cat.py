@@ -10,6 +10,7 @@ def see(str_data):
     """
     模拟看的过程
     """
+    img = None
     try:
         decode_data = base64.b64decode(str_data)
         np_data = np.fromstring(decode_data, np.uint8)
@@ -20,7 +21,8 @@ def see(str_data):
     except Exception as e:
         print(e)
     # todo 输入数据到 brain
-    print("yes I see a image ", img.shape)
+    if img is not None:
+        print("yes I see a image ", img.shape)
     return 1
 
 

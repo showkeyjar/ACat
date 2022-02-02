@@ -1,4 +1,4 @@
-import requests
+import numpy as np
 
 """
 todo 通用学习类
