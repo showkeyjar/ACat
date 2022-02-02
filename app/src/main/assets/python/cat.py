@@ -14,6 +14,7 @@ def see(str_data):
     try:
         decode_data = base64.b64decode(str_data)
         np_data = np.fromstring(decode_data, np.uint8)
+        # todo 目前拿到的数据都是None，需要检查
         old_img = cv2.imdecode(np_data, cv2.IMREAD_UNCHANGED)
         img = cv2.resize(old_img, (96, 160), interpolation=cv2.INTER_NEAREST)
         img = img.astype(np.float32)
