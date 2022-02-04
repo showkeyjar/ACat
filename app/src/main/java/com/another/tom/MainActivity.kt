@@ -75,7 +75,7 @@ class MainActivity : AppCompatActivity(){
     private val delay = intArrayOf(0, 2000, 1000, 200, 5000, 2000, 0)
 
     /*
-    https://developer.android.com/codelabs/camerax-getting-started?hl=zh-cn#3
+    https://developer.android.com/codelabs/camerax-getting-started?hl=zh-cn#5
     https://developer.android.com/training/camerax/analyze
     目前 CameraX 不支持直接对video进行读取分析，只能先使用 ImageAnalysis
     */
@@ -93,7 +93,7 @@ class MainActivity : AppCompatActivity(){
             return data // Return the byte array
         }
 
-        private fun bitmapToString(inputFace: ByteArray):String{
+        private fun byteArrayToString(inputFace: ByteArray):String{
             val encodedString: String = Base64.encodeToString(inputFace, Base64.DEFAULT)
             return encodedString
         }
@@ -110,10 +110,10 @@ class MainActivity : AppCompatActivity(){
             val buffer = image.planes[0].buffer
             val data = buffer.toByteArray()
             // 将图像数据发送给python
-            var encodingStr = bitmapToString(data)
+            var encodingStr = byteArrayToString(data)
+            Log.i("input", encodingStr.slice(1..50))
             try {
-                react = py.getModule("cat").callAttr("see", encodingStr)
-                    .toJava(Int::class.java)
+                react = py.getModule("cat").callAttr("see", encodingStr).toInt()
             }catch (e: Exception) {
                 Log.i("error", e.toString())
             }
