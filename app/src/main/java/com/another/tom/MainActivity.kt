@@ -79,7 +79,7 @@ class MainActivity : AppCompatActivity(){
     https://developer.android.com/training/camerax/analyze
     目前 CameraX 不支持直接对video进行读取分析，只能先使用 ImageAnalysis
     */
-    private lateinit var viewBinding: ActivityMainBinding
+    // private lateinit var viewBinding: ActivityMainBinding
     private lateinit var cameraExecutor: ExecutorService
 
     private class LuminosityAnalyzer(private val listener: LumaListener, private val con:Context) : ImageAnalysis.Analyzer {
@@ -107,13 +107,20 @@ class MainActivity : AppCompatActivity(){
                 py = Python.getInstance()
             }
             var react = 0
-            val buffer = image.planes[0].buffer
-            val data = buffer.toByteArray()
-            // 将图像数据发送给python
-            var encodingStr = byteArrayToString(data)
-            Log.i("input", encodingStr.slice(1..50))
+            // YUV420_888 格式介绍: https://www.jianshu.com/p/944ede616261
+            Log.i("planes size", image.planes.size.toString())
+            // 0:Y 亮度,1:U 色度,2:V 浓度
+            val byteY = image.planes[0].buffer.toByteArray()
+            var encodingY = byteArrayToString(byteY)
+            Log.i("input", encodingY.slice(1..50))
+
+            val byteU = image.planes[1].buffer.toByteArray()
+            var encodingU = byteArrayToString(byteU)
+
+            val byteV = image.planes[2].buffer.toByteArray()
+            var encodingV = byteArrayToString(byteV)
             try {
-                react = py.getModule("cat").callAttr("see", encodingStr).toInt()
+                react = py.getModule("cat").callAttr("see_raw", encodingY, encodingU, encodingV).toInt()
             }catch (e: Exception) {
                 Log.i("error", e.toString())
             }
@@ -132,11 +139,11 @@ class MainActivity : AppCompatActivity(){
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
 
             // Preview
-            val preview = Preview.Builder()
-                .build()
-                .also {
-                    it.setSurfaceProvider(viewBinding.viewFinder.surfaceProvider)
-                }
+//            val preview = Preview.Builder()
+//                .build()
+//                .also {
+//                    it.setSurfaceProvider(viewBinding.viewFinder.surfaceProvider)
+//                }
 
             val imageAnalyzer = ImageAnalysis.Builder()
                 .build()
@@ -153,8 +160,8 @@ class MainActivity : AppCompatActivity(){
                 // Unbind use cases before rebinding
                 cameraProvider.unbindAll()
                 // Bind use cases to camera
-                cameraProvider.bindToLifecycle(
-                    this, cameraSelector, preview, imageAnalyzer)
+                // cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalyzer)
+                cameraProvider.bindToLifecycle(this, cameraSelector, imageAnalyzer)
             } catch(exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
             }
@@ -174,10 +181,10 @@ class MainActivity : AppCompatActivity(){
      */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        viewBinding = ActivityMainBinding.inflate(layoutInflater)
+        // viewBinding = ActivityMainBinding.inflate(layoutInflater)
+        // setContentView(viewBinding.root)
         //加载布局文件 设置显示的内容
-        // setContentView(R.layout.activity_main)
-        setContentView(viewBinding.root)
+        setContentView(R.layout.activity_main)
 
         //通过id查找视图 只会在上面设置的内容中查找  surfaceView 特点必须自己先创建完 才能执行 ，可以通过句柄得知是否初始化完成
         sv = findViewById<View>(R.id.surface) as SurfaceView

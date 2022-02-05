@@ -33,5 +33,29 @@ def see(str_data):
     return 1
 
 
+def see_raw(str_y, str_u, str_v):
+    """
+    模拟看见的过程(先尝试纯粹使用原始数据,不做任何加工)
+    接收 YUV格式的数据
+    """
+    try:
+        decode_y = base64.b64decode(str_y)
+        np_y = np.fromstring(decode_y, np.uint8)  # (307200,) = 640*480
+        np_y = np_y.reshape(640, 480)
+        print("find raw data:" + str(np_y.shape))
+
+        decode_u = base64.b64decode(str_u)
+        np_u = np.fromstring(decode_u, np.uint8)
+        np_u = np_u.reshape(640, 480)
+
+        decode_v = base64.b64decode(str_v)
+        np_v = np.fromstring(decode_v, np.uint8)
+        np_v = np_v.reshape(640, 480)
+
+    except Exception as e:
+        print(e)
+    return 1
+
+
 if __name__ == '__main__':
     see(None)

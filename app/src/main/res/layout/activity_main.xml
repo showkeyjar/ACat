@@ -117,10 +117,10 @@
 
     </LinearLayout>
 
-    <androidx.camera.view.PreviewView
-        android:id="@+id/viewFinder"
-        android:layout_width="96dp"
-        android:layout_height="160dp"
-        android:layout_margin="8dp" />
+<!--    <androidx.camera.view.PreviewView-->
+<!--        android:id="@+id/viewFinder"-->
+<!--        android:layout_width="96dp"-->
+<!--        android:layout_height="160dp"-->
+<!--        android:layout_margin="8dp" />-->
 
 </FrameLayout>

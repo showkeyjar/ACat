@@ -2,6 +2,8 @@
 
 Android app Another Tomcat
 
+![screen](doc/sample.jpg)
+
 use neural network to procees input and output
 
 apply to cat avatar
