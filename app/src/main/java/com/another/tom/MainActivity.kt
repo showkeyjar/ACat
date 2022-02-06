@@ -346,7 +346,7 @@ class MainActivity : AppCompatActivity(){
      */
     fun click(v: View) {
         if (isPlaying) {
-            Toast.makeText(this@MainActivity, "再快点屏就戳烂了，慢点戳！", Toast.LENGTH_SHORT).show()
+            // Toast.makeText(this@MainActivity, "再快点屏就戳烂了，慢点戳！", Toast.LENGTH_SHORT).show()
             return
         }
         //获取被点击view的id
