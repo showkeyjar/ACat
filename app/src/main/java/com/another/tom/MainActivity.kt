@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.graphics.drawable.BitmapDrawable
 import android.media.SoundPool
@@ -19,7 +20,6 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
-import com.another.tom.databinding.ActivityMainBinding
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 import java.nio.ByteBuffer
@@ -28,7 +28,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.collections.ArrayList
 
-typealias LumaListener = (luma: Double) -> Unit
+typealias LumaListener = (luma: Int) -> Unit
 
 
 class MainActivity : AppCompatActivity(){
@@ -52,13 +52,13 @@ class MainActivity : AppCompatActivity(){
     //踩脚
     private val knockout = arrayOf<Any>("knockout_", 81)
     //临时图片
-    var temp: Array<Any>? = null
+    private var temp: Array<Any>? = null
     //声音池 短声音播放
     private var soundPool: SoundPool? = null
     //是否正在播放动画
     private var isPlaying = false
     //声音池id集合
-    private var soundIds: ArrayList<Int>? = ArrayList<Int>()
+    private var soundIds: ArrayList<Int>? = ArrayList()
     //声音资源文件 顺序要和图片 顺序一致
     private val resids = intArrayOf(
         R.raw.cymbal,
@@ -107,26 +107,20 @@ class MainActivity : AppCompatActivity(){
                 py = Python.getInstance()
             }
             var react = 0
-            // YUV420_888 格式介绍: https://www.jianshu.com/p/944ede616261
             Log.i("planes size", image.planes.size.toString())
-            // 0:Y 亮度,1:U 色度,2:V 浓度
-            val byteY = image.planes[0].buffer.toByteArray()
-            var encodingY = byteArrayToString(byteY)
-            Log.i("input", encodingY.slice(1..50))
-
-            val byteU = image.planes[1].buffer.toByteArray()
-            var encodingU = byteArrayToString(byteU)
-
-            val byteV = image.planes[2].buffer.toByteArray()
-            var encodingV = byteArrayToString(byteV)
-            try {
-                react = py.getModule("cat").callAttr("see_raw", encodingY, encodingU, encodingV).toInt()
-            }catch (e: Exception) {
-                Log.i("error", e.toString())
+            if (image.format == PixelFormat.RGBA_8888){
+                val byteRGBA = image.planes[0].buffer.toByteArray()
+                val encodingRGBA = byteArrayToString(byteRGBA)
+                // 0:R 红,1:G 绿,2:B 蓝,3:A 透明度
+                try {
+                    react = py.getModule("cat").callAttr("see_rgba", encodingRGBA).toInt()
+                }catch (e: Exception) {
+                    Log.i("error", e.toString())
+                }
             }
             // val pixels = data.map { it.toInt() and 0xFF }
             // val luma = pixels.average()
-            listener(react.toDouble())
+            listener(react)
             image.close()
         }
     }
@@ -144,12 +138,14 @@ class MainActivity : AppCompatActivity(){
 //                .also {
 //                    it.setSurfaceProvider(viewBinding.viewFinder.surfaceProvider)
 //                }
-
+            // 系统默认 YUV420_888 格式介绍: https://www.jianshu.com/p/944ede616261 使用 setOutputImageFormat转换格式
             val imageAnalyzer = ImageAnalysis.Builder()
+                .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
                 .build()
                 .also {
                     it.setAnalyzer(cameraExecutor, LuminosityAnalyzer({ luma ->
-                        Log.d(TAG, "Average luminosity: $luma")
+                        // Log.d(TAG, "Average luminosity: $luma")
+                        reAction(luma)
                     }, applicationContext))
                 }
 
@@ -237,7 +233,6 @@ class MainActivity : AppCompatActivity(){
 
     companion object {
         private const val TAG = "CameraXApp"
-        private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
         private const val REQUEST_CODE_PERMISSIONS = 10
         private val REQUIRED_PERMISSIONS =
             mutableListOf (
@@ -262,7 +257,6 @@ class MainActivity : AppCompatActivity(){
          */
         override fun surfaceCreated(holder: SurfaceHolder) {
             Log.i("tag", "======begin set surfaceView =========")
-
 
             //获取surfaceView 的宽高
             val svWidth = sv!!.width
@@ -301,7 +295,6 @@ class MainActivity : AppCompatActivity(){
         val drawable = ResourcesCompat.getDrawable(getResources(), id, null)
         //子类型； Drawable 有多种类型的 例如 颜色绘制的图
         val bmpDaw = drawable as BitmapDrawable
-
         //获取可绘制资源中的位图
         return bmpDaw.bitmap
     }
@@ -335,22 +328,14 @@ class MainActivity : AppCompatActivity(){
         holder!!.unlockCanvasAndPost(canvas)
     }
 
-    /**
-     * 点击事件
-     * 规定：
-     * 修饰符 必须 public
-     * 返回值 必须 void
-     * 方法名称 大小写区分 xml文件必须一致
-     * 参数 必须是一个View 只能有一个view
-     * @param v 被点击的view
-     */
-    fun click(v: View) {
+    fun reAction(id:Int){
+        if(id>7){
+            return
+        }
         if (isPlaying) {
             // Toast.makeText(this@MainActivity, "再快点屏就戳烂了，慢点戳！", Toast.LENGTH_SHORT).show()
             return
         }
-        //获取被点击view的id
-        val id = v.id
         when (id) {
             R.id.cymbal -> {
                 Log.e("say", "==================cymbal==============")
@@ -385,6 +370,21 @@ class MainActivity : AppCompatActivity(){
             else -> return
         }
         startAnimation(temp)
+    }
+
+    /**
+     * 点击事件
+     * 规定：
+     * 修饰符 必须 public
+     * 返回值 必须 void
+     * 方法名称 大小写区分 xml文件必须一致
+     * 参数 必须是一个View 只能有一个view
+     * @param v 被点击的view
+     */
+    fun click(v: View) {
+        //获取被点击view的id
+        val id = v.id
+        reAction(id)
     }
 
     private fun startAnimation(temp: Array<Any>?) {
@@ -426,7 +426,7 @@ class MainActivity : AppCompatActivity(){
     }
 
     //统计触发几次
-    var count = 0
+    private var count = 0
 
     /**
      * 屏幕触摸事件

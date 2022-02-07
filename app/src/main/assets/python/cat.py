@@ -1,61 +1,68 @@
 #!/usr/bin/env python
 # --*-- coding:utf-8 --*--
-import cv2
+# import cv2
 import base64
 import numpy as np
+from brain import Brain
 # from input.deal_input import deal_text
 
-
-def see(str_data):
-    """
-    模拟看的过程
-    """
-    img = None
-    try:
-        decode_data = base64.b64decode(str_data)
-        np_data = np.fromstring(decode_data, np.uint8)
-        # np_data = np.fromstring(decode_data, np.float)
-        # (307200,) -> (160, 80, 3)
-        # np_data = np_data.reshape(3, 160, 80)
-        print("find java data:" + str(np_data.shape))
-        # todo 目前拿到的数据都是None，需要检查
-        # old_img = cv2.imdecode(np_data, cv2.IMREAD_UNCHANGED)
-        old_img = cv2.imdecode(np_data, 1)
-        print("find img data:" + str(old_img.shape))
-        img = cv2.resize(old_img, (80, 160), interpolation=cv2.INTER_NEAREST)
-        img = img.astype(np.float32)
-        img /= 255.0
-    except Exception as e:
-        print(e)
-    # todo 输入数据到 brain
-    if img is not None:
-        print("yes I see a image " + str(img.shape))
-    return 1
+cat_brain = Brain()
 
 
-def see_raw(str_y, str_u, str_v):
+def see_rgb(str_r, str_g, str_b, str_a):
     """
     模拟看见的过程(先尝试纯粹使用原始数据,不做任何加工)
-    接收 YUV格式的数据
+    接收 RGBA 格式的数据
     """
+    react = 0
     try:
-        decode_y = base64.b64decode(str_y)
-        np_y = np.fromstring(decode_y, np.uint8)  # (307200,) = 640*480
-        np_y = np_y.reshape(640, 480)
-        print("find raw data:" + str(np_y.shape))
+        decode_r = base64.b64decode(str_r)
+        np_r = np.fromstring(decode_r, np.uint8)  # (307200,) = 640*480
+        np_r = np_r.reshape(640, 480)
+        print("find r:" + str(np_r.shape))
 
-        decode_u = base64.b64decode(str_u)
-        np_u = np.fromstring(decode_u, np.uint8)
-        np_u = np_u.reshape(640, 480)
+        decode_g = base64.b64decode(str_g)
+        np_g = np.fromstring(decode_g, np.uint8)
+        np_g = np_g.reshape(640, 480)
+        print("find g:" + str(np_g.shape))
 
-        decode_v = base64.b64decode(str_v)
-        np_v = np.fromstring(decode_v, np.uint8)
-        np_v = np_v.reshape(640, 480)
+        decode_b = base64.b64decode(str_b)
+        np_b = np.fromstring(decode_b, np.uint8)
+        np_b = np_b.reshape(640, 480)
+        print("find b:" + str(np_b.shape))
 
+        decode_a = base64.b64decode(str_a)
+        np_a = np.fromstring(decode_a, np.uint8)
+        np_a = np_a.reshape(640, 480)
+        print("find a:" + str(np_a.shape))
+
+        np_array = np.array([np_r, np_g, np_b, np_a])
+        react, attention = cat_brain.play(np_array)
+        # attention 暂不使用
+        print(react, attention)
     except Exception as e:
         print(e)
-    return 1
+    return react
+
+
+def see_rgba(str_rgba):
+    """
+    模拟看见的过程(先尝试纯粹使用原始数据,不做任何加工)
+    接收 RGBA 格式的数据
+    """
+    react = 10
+    try:
+        decode_r = base64.b64decode(str_rgba)
+        np_array = np.fromstring(decode_r, np.uint8)  # (307200,) = 640*480
+        np_array = np_array.reshape(640, 480, 4)
+        print("find rgba: " + str(np_array.shape))
+        react, attention = cat_brain.play(np_array)
+        # attention 暂不使用
+        print("get react: " + str(react) + ", attention: " + str(attention))
+    except Exception as e:
+        print(e)
+    return react
 
 
 if __name__ == '__main__':
-    see(None)
+    see_rgba(None)

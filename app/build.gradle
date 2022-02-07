@@ -26,7 +26,10 @@ android {
         python {
             buildPython "D:/tools/anaconda3/envs/beauty/python.exe"
             pip {
-                install "opencv-python"
+                // install "opencv-python"
+                install "dill"
+                install "scipy"
+                install "pandas"
             }
         }
     }
