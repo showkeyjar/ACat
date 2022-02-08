@@ -73,13 +73,16 @@ class Brain:
             self.prev_entropy = np.mean([entropy(frame) for frame in self.memories.tail(1)["frames"].values[0]])
 
     def _similar(self, np_array):
+        js_score = 1
+        js_index = 0
         if self.memories is not None:
-            self.memories["js_score"] = self.memories["frames"].apply(lambda x: d.jensenshannon(np_array, x))
-            js_score = self.memories["js_score"].min()
-            js_index = self.memories["js_score"].argmin()
-        else:
-            js_score = 1
-            js_index = 0
+            try:
+                self.memories["js_score"] = self.memories["frames"].apply(lambda x: d.jensenshannon(np_array, x))
+                self.memories["js_score"] = pd.to_numeric(self.memories["js_score"])
+                js_score = self.memories["js_score"].min()
+                js_index = self.memories["js_score"].argmin()
+            except Exception as e:
+                print("cal similar error:" + str(e))
         return js_score, js_index
 
     def play(self, np_array):
@@ -88,39 +91,45 @@ class Brain:
         熵发生变化时,sence开始和结束的标志(熵的变化是固定的感受野?无法感知局部)
         存在奖励时,则可认为一个sence的结束
         """
+        np_array = np_array.reshape(640, 480, 4, -1)
         rewards = None
         cat_react = 10
         src_entropies = []
         start_time = datetime.now()
         attention = self.attention
         src_entropy = np.mean(entropy(np_array))
-        print("get entropy: " + str(src_entropy))
-        if abs(src_entropy - self.frame_entropy) < 0.05:
+        # print("get entropy: " + str(src_entropy))
+        # 实际发现 0.04 比较好
+        if abs(src_entropy - self.frame_entropy) < 0.04:
             self.temp_memory.append(np_array)
             self.attention = self.attention / 0.8
             src_entropies.append(src_entropy)
-            # 由于小猫的大脑有限,只能记住最近的1024帧,超过1024帧且信息熵不变,则开始遗忘
-            if len(self.temp_memory) > 1024:
+            # 由于小猫的大脑有限,只能记住最近的16帧,超过16帧且信息熵不变,则开始遗忘
+            if len(self.temp_memory) > 16:
                 # 计算本次reward
+                m_ent = np.mean(src_entropies)
                 if self.prev_entropy is not None:
-                    gain = abs(np.mean(src_entropies) - self.prev_entropy)
+                    gain = abs(m_ent - self.prev_entropy)
                 else:
-                    gain = np.mean(src_entropies)
-                self.prev_entropy = np.mean(src_entropies)
+                    gain = m_ent
+                self.prev_entropy = m_ent
                 rewards = reward_score(start_time, gain)
+                print("reach reward score: " + str(rewards))
                 del self.temp_memory[0]
         else:
-            print("find new scence: " + str(self.frame_entropy))
+            print("find new scence: " + str(src_entropy) + " : " + str(self.frame_entropy))
             if rewards is None:
+                m_ent = np.mean(src_entropies)
                 if self.prev_entropy is not None:
-                    gain = abs(np.mean(src_entropies) - self.prev_entropy)
+                    gain = abs(m_ent - self.prev_entropy)
                 else:
-                    gain = np.mean(src_entropies)
-                self.prev_entropy = np.mean(src_entropies)
+                    gain = m_ent
+                self.prev_entropy = m_ent
                 rewards = reward_score(start_time, gain)
+                print("get reward score: " + str(rewards))
             sence = self.remember_or_learn(self.temp_memory, rewards)
             cat_react = self.react(sence)
-            print("get new react:" + str(cat_react))
+            # print("get new react:" + str(cat_react))
             attention = self.attention
             self.attention = 1
             self.temp_memory = [np_array]
@@ -150,7 +159,7 @@ class Brain:
         if js_score > 0.4:
             sence = pd.Series({"frames": np_array, "reacts": None, "rewards": None})
             if self.memories is not None:
-                self.memories = self.memories.append(sence)
+                self.memories = self.memories.append(sence, ignore_index=True)
                 js_index = self.memories.last_valid_index()
             else:
                 self.memories = pd.DataFrame([sence])
