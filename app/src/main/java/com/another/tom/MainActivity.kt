@@ -138,14 +138,18 @@ class MainActivity : AppCompatActivity(){
 //                .also {
 //                    it.setSurfaceProvider(viewBinding.viewFinder.surfaceProvider)
 //                }
+            var prevAction:Int=0
             // 系统默认 YUV420_888 格式介绍: https://www.jianshu.com/p/944ede616261 使用 setOutputImageFormat转换格式
             val imageAnalyzer = ImageAnalysis.Builder()
                 .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
                 .build()
                 .also {
                     it.setAnalyzer(cameraExecutor, LuminosityAnalyzer({ luma ->
-                        // Log.d(TAG, "Average luminosity: $luma")
-                        reAction(luma)
+                        Log.d(TAG, "brain action: $luma")
+                        if(luma!=prevAction){
+                            reAction(luma)
+                            prevAction = luma
+                        }
                     }, applicationContext))
                 }
 
@@ -328,10 +332,7 @@ class MainActivity : AppCompatActivity(){
         holder!!.unlockCanvasAndPost(canvas)
     }
 
-    fun reAction(id:Int){
-        if(id>7){
-            return
-        }
+    private fun catPlay(id:Int){
         if (isPlaying) {
             // Toast.makeText(this@MainActivity, "再快点屏就戳烂了，慢点戳！", Toast.LENGTH_SHORT).show()
             return
@@ -372,6 +373,35 @@ class MainActivity : AppCompatActivity(){
         startAnimation(temp)
     }
 
+    private fun reAction(actionIndex:Int){
+        if (isPlaying) {
+            return
+        }
+        index = actionIndex
+        when(actionIndex){
+            0 -> {
+                temp = cymbal
+            }
+            1 -> {
+                temp = scratch
+            }
+            2 -> {
+                temp = pie
+            }
+            3 -> {
+                temp = fart
+            }
+            4 -> {
+                temp = drink
+            }
+            5 -> {
+                temp = eat
+            }
+            else -> return
+        }
+        startAnimation(temp)
+    }
+
     /**
      * 点击事件
      * 规定：
@@ -384,7 +414,7 @@ class MainActivity : AppCompatActivity(){
     fun click(v: View) {
         //获取被点击view的id
         val id = v.id
-        reAction(id)
+        return catPlay(id)
     }
 
     private fun startAnimation(temp: Array<Any>?) {

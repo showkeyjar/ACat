@@ -95,7 +95,7 @@ class Brain:
         attention = self.attention
         src_entropy = np.mean(entropy(np_array))
         print("get entropy: " + str(src_entropy))
-        if abs(src_entropy - self.frame_entropy) < 0.5:
+        if abs(src_entropy - self.frame_entropy) < 0.05:
             self.temp_memory.append(np_array)
             self.attention = self.attention / 0.8
             src_entropies.append(src_entropy)
@@ -133,9 +133,9 @@ class Brain:
         反馈
         """
         if sence["reacts"] is None:
-            action_list = list(range(7))
+            action_list = list(range(6))
         else:
-            action_list = [a for a in range(7) if a not in sence["reacts"]]
+            action_list = [a for a in range(6) if a not in sence["reacts"]]
             action_list = action_list + [react * reward for react, reward in zip(sence["reacts"], sence["rewards"])]
         reaction = random.choice(action_list)
         return reaction

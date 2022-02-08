@@ -55,10 +55,11 @@ def see_rgba(str_rgba):
         decode_r = base64.b64decode(str_rgba)
         np_array = np.fromstring(decode_r, np.uint8)  # (307200,) = 640*480
         np_array = np_array.reshape(640, 480, 4)
-        print("find rgba: " + str(np_array.shape))
+        # print("find rgba: " + str(np_array.shape))
         react, attention = cat_brain.play(np_array)
         # attention 暂不使用
-        print("get react: " + str(react) + ", attention: " + str(attention))
+        if react < 10:
+            print("get react: " + str(react) + ", attention: " + str(attention))
     except Exception as e:
         print(e)
     return react
