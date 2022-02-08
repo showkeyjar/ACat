@@ -61,7 +61,7 @@ class Brain:
     """
     记忆的结构: 场景, 反馈, 奖励
     memories = [{"frames":[np.array(640, 480, 4)], "reacts": [list], "rewards": [list]}]
-    场景 frames: 猫的视网膜只有3层,分别对应yuv
+    场景 frames: 猫的视网膜只有4层,分别对应RGBA
     """
 
     def __init__(self) -> None:
@@ -169,7 +169,7 @@ class Brain:
         if prev_reward is not None:
             prev_reward_list = None
             if self.memories.iloc[self.prev_index]["rewards"] is not None:
-                prev_reward_list = self.memories.iloc[self.prev_index]["rewards"].values[0]
+                prev_reward_list = self.memories.iloc[self.prev_index]["rewards"][0]
             if prev_reward_list is not None:
                 prev_reward_list.append(prev_reward)
             else:
