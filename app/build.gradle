@@ -26,10 +26,12 @@ android {
         python {
             buildPython "D:/tools/anaconda3/envs/beauty/python.exe"
             pip {
-                // install "opencv-python"
-                install "dill"
-                install "scipy"
+                // options "-i", "https://pypi.tuna.tsinghua.edu.cn/simple"
+                // install "dill"
                 install "pandas"
+                install "scipy"
+                // install "datatable" // chaquopy not support yet
+                // install "pyarrow"  // chaquopy not support yet
             }
         }
     }

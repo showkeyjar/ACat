@@ -25,7 +25,7 @@ def load_mem():
     try:
         # with open(join(dirname(__file__), "memory.pkl"), "rb") as file:
         #     memories = dill.load(file)
-        df_mem = pd.read_feather(join(dirname(__file__), "memory.ft"))
+        df_mem = pd.read_pickle(join(dirname(__file__), "memory.pk"))
         df_mem.drop("index", axis=1, inplace=True, errors="ignore")
     except Exception as e:
         print(e)
@@ -37,16 +37,17 @@ def save_mem(df_mem):
     try:
         # with open(join(dirname(__file__), 'memory.pkl'), 'wb') as file:
         #     dill.dump(memories, file)
-        df_mem.to_feather(join(dirname(__file__), "memory.ft"))
+        df_mem.to_pickle(join(dirname(__file__), "memory.pk"))
     except Exception as e:
         print(e)
 
 
-def reward_score(start_time, gain_entropy):
+def cal_reward(start_time, gain_entropy):
     """
     计算奖励: = (互动时间) * 交互次数 + 信息新颖度
     """
     total_time = (datetime.now() - start_time).total_seconds()
+    print("cal reward total time: " + str(total_time) + " and gain entropy: " + str(gain_entropy))
     reward_score = total_time * gain_entropy / 10
     reward_score = 1 if reward_score < 1 else reward_score
     return reward_score
@@ -65,6 +66,7 @@ class Brain:
     """
 
     def __init__(self) -> None:
+        self.sence_start = datetime.now()
         # self.retinas = np.zeros((640, 480, 4))
         self.temp_memory = []
         self.memories = load_mem()
@@ -77,7 +79,7 @@ class Brain:
         js_index = 0
         if self.memories is not None:
             try:
-                self.memories["js_score"] = self.memories["frames"].apply(lambda x: d.jensenshannon(np_array, x))
+                self.memories["js_score"] = self.memories["frames"].apply(lambda x: d.jensenshannon(np_array, np.array(x).reshape(640, 480, 4, -1)))
                 self.memories["js_score"] = pd.to_numeric(self.memories["js_score"])
                 js_score = self.memories["js_score"].min()
                 js_index = self.memories["js_score"].argmin()
@@ -95,7 +97,6 @@ class Brain:
         rewards = None
         cat_react = 10
         src_entropies = []
-        start_time = datetime.now()
         attention = self.attention
         src_entropy = np.mean(entropy(np_array))
         # print("get entropy: " + str(src_entropy))
@@ -104,28 +105,30 @@ class Brain:
             self.temp_memory.append(np_array)
             self.attention = self.attention / 0.8
             src_entropies.append(src_entropy)
-            # 由于小猫的大脑有限,只能记住最近的16帧,超过16帧且信息熵不变,则开始遗忘
-            if len(self.temp_memory) > 16:
+            # 由于小猫的大脑有限,只能记住最近的32帧,超过且信息熵不变,则开始遗忘
+            if len(self.temp_memory) > 32:
                 # 计算本次reward
                 m_ent = np.mean(src_entropies)
+                gain = None
                 if self.prev_entropy is not None:
                     gain = abs(m_ent - self.prev_entropy)
-                else:
+                if gain is None:
                     gain = m_ent
                 self.prev_entropy = m_ent
-                rewards = reward_score(start_time, gain)
+                rewards = cal_reward(self.sence_start, gain)
                 print("reach reward score: " + str(rewards))
                 del self.temp_memory[0]
         else:
             print("find new scence: " + str(src_entropy) + " : " + str(self.frame_entropy))
             if rewards is None:
                 m_ent = np.mean(src_entropies)
+                gain = None
                 if self.prev_entropy is not None:
                     gain = abs(m_ent - self.prev_entropy)
-                else:
+                if gain is None:
                     gain = m_ent
                 self.prev_entropy = m_ent
-                rewards = reward_score(start_time, gain)
+                rewards = cal_reward(self.sence_start, gain)
                 print("get reward score: " + str(rewards))
             sence = self.remember_or_learn(self.temp_memory, rewards)
             cat_react = self.react(sence)
@@ -134,6 +137,7 @@ class Brain:
             self.attention = 1
             self.temp_memory = [np_array]
             self.frame_entropy = src_entropy
+            self.sence_start = datetime.now()
         attention = 0 if attention < 0 else attention
         return cat_react, attention
     
