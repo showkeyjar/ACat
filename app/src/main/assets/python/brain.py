@@ -194,3 +194,9 @@ class Brain:
         2.演化新的plan
         """
         pass
+
+    def associate():
+        """
+        todo 联想
+        """
+        pass
