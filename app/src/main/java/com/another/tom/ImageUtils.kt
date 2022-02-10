@@ -2,6 +2,7 @@ package com.another.tom
 
 import android.graphics.Bitmap
 import android.os.Environment
+import android.os.Environment.getExternalStorageDirectory
 import java.io.File
 import java.io.FileOutputStream
 
@@ -38,7 +39,7 @@ object ImageUtils {
      */
     @JvmOverloads
     fun saveBitmap(bitmap: Bitmap, filename: String = "preview.png") {
-        val root = Environment.getExternalStorageDirectory()
+        val root = getExternalStorageDirectory()
             .absolutePath + File.separator + "tensorflow"
         //LOGGER.i("Saving %dx%d bitmap to %s.", bitmap.getWidth(), bitmap.getHeight(), root);
         val myDir = File(root)
@@ -87,11 +88,11 @@ object ImageUtils {
         }
     }
 
-    private fun YUV2RGB(y: Int, u: Int, v: Int): Int {
+    private fun YUV2RGB(inputY: Int, inputU: Int, inputV: Int): Int {
         // Adjust and check YUV values
-        var y = y
-        var u = u
-        var v = v
+        var y = inputY
+        var u = inputU
+        var v = inputV
         y = if (y - 16 < 0) 0 else y - 16
         u -= 128
         v -= 128

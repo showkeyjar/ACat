@@ -1,6 +1,6 @@
 # ACat
 
-![screen](doc/sample.jpg)
+<img src="doc/sample.jpg" width="120px" />
 
 Android 应用 另一只汤姆猫
 
