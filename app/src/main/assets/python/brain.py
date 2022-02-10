@@ -48,8 +48,10 @@ def cal_reward(start_time, gain_entropy):
     """
     total_time = (datetime.now() - start_time).total_seconds()
     print("cal reward total time: " + str(total_time) + " and gain entropy: " + str(gain_entropy))
+    if gain_entropy is None:
+        gain_entropy = 0.001
     reward_score = total_time * gain_entropy / 10
-    reward_score = 1 if reward_score < 1 else reward_score
+    reward_score = 0.1 if reward_score < 0.1 else reward_score
     return reward_score
 
 

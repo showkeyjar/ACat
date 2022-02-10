@@ -107,7 +107,7 @@ class MainActivity : AppCompatActivity(){
                 py = Python.getInstance()
             }
             var react = 0
-            Log.i("planes size", image.planes.size.toString())
+            // Log.i("planes size", image.planes.size.toString())
             if (image.format == PixelFormat.RGBA_8888){
                 val byteRGBA = image.planes[0].buffer.toByteArray()
                 val encodingRGBA = byteArrayToString(byteRGBA)
@@ -145,7 +145,7 @@ class MainActivity : AppCompatActivity(){
                 .build()
                 .also {
                     it.setAnalyzer(cameraExecutor, LuminosityAnalyzer({ luma ->
-                        Log.d(TAG, "brain action: $luma")
+                        // Log.d(TAG, "brain action: $luma")
                         if(luma!=prevAction){
                             reAction(luma)
                             prevAction = luma
