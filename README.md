@@ -1,12 +1,16 @@
 # ACat
 
+![screen](doc/sample.jpg)
+
 Android app Another Tomcat
 
 Simulating a kitten's brain using an entropy processor
 
-![screen](doc/sample.jpg)
+## Feature
 
-apply to cat avatar
+1.Read camera data and interact with users
+
+2.Receive user click interaction
 
 ## Install
 

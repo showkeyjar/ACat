@@ -1,12 +1,16 @@
 # ACat
 
+![screen](doc/sample.jpg)
+
 Android 应用 另一只汤姆猫
 
 使用信息熵处理机模拟小猫的大脑
 
-![screen](doc/sample.jpg)
+## 特征
 
-apply to cat avatar
+1.读取摄像头数据与用户交互
+
+2.接收用户点击交互
 
 ## 安装
 
