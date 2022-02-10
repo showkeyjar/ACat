@@ -8,7 +8,7 @@ from brain import Brain
 cat_brain = Brain()
 see_tick = 0
 # 调整看的频率, 方便调试
-see_frequency = 2
+see_frequency = 1
 
 
 def see_rgba(str_rgba):
@@ -18,7 +18,7 @@ def see_rgba(str_rgba):
     """
     global see_frequency, see_tick
     react = 10
-    if see_tick / see_frequency == 0:
+    if see_tick % see_frequency == 0:
         try:
             decode_r = base64.b64decode(str_rgba)
             np_array = np.fromstring(decode_r, np.uint8)  # (307200,) = 640*480

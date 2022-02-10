@@ -175,7 +175,7 @@ class Brain:
         if prev_reward is not None:
             prev_reward_list = None
             if self.memories.iloc[self.prev_index]["rewards"] is not None:
-                prev_reward_list = self.memories.iloc[self.prev_index]["rewards"][0]
+                prev_reward_list = self.memories.iloc[self.prev_index]["rewards"]
             if prev_reward_list is not None:
                 prev_reward_list.append(prev_reward)
             else:
