@@ -24,5 +24,6 @@ Android Studio 2021.1.1
 
 python 3.8
 
+[cat brain design](./app/src/main/assets/python/readme.md)
 
 Welcome to try and adoption!

@@ -24,5 +24,7 @@ Android Studio 2021.1.1
 
 python 3.8
 
+[猫脑的设计](./app/src/main/assets/python/readme.md)
+
 
 欢迎试用和领养!

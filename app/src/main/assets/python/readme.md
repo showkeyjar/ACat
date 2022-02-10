@@ -17,5 +17,11 @@ https://github.com/mila-iqia/atari-representation-learning
 
 ## usage
 
-pip install nengo
+pip install nengo (no use yet)
 
+
+## todo
+
+1. if entropy stay same how to react;
+
+2. if reward stay same how to react.
