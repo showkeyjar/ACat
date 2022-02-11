@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.graphics.drawable.BitmapDrawable
+import android.media.MediaRecorder
 import android.media.SoundPool
 import android.os.Build
 import android.os.Bundle
@@ -19,9 +20,11 @@ import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.PackageManagerCompat.LOG_TAG
 import androidx.core.content.res.ResourcesCompat
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
+import java.io.IOException
 import java.nio.ByteBuffer
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -78,9 +81,12 @@ class MainActivity : AppCompatActivity(){
     https://developer.android.com/codelabs/camerax-getting-started?hl=zh-cn#5
     https://developer.android.com/training/camerax/analyze
     目前 CameraX 不支持直接对video进行读取分析，只能先使用 ImageAnalysis
+    https://developer.android.com/guide/topics/media/mediarecorder
+    对音频进行处理
     */
     // private lateinit var viewBinding: ActivityMainBinding
     private lateinit var cameraExecutor: ExecutorService
+    private var recorder: MediaRecorder? = null
 
     private class LuminosityAnalyzer(private val listener: LumaListener, private val con:Context) : ImageAnalysis.Analyzer {
         private lateinit var py: Python
@@ -169,6 +175,37 @@ class MainActivity : AppCompatActivity(){
         }, ContextCompat.getMainExecutor(this))
     }
 
+    private fun startRecording() {
+        recorder = MediaRecorder().apply {
+            setAudioSource(MediaRecorder.AudioSource.MIC)
+            setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
+            setOutputFile("/dev/null")
+            setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
+
+            try {
+                prepare()
+            } catch (e: IOException) {
+                Log.e("sound", "prepare() failed")
+            }
+
+            start()
+        }
+    }
+
+    private fun stopRecording() {
+        recorder?.apply {
+            stop()
+            release()
+        }
+        recorder = null
+    }
+
+    private fun onRecord(start: Boolean) = if (start) {
+        startRecording()
+    } else {
+        stopRecording()
+    }
+
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(
             baseContext, it) == PackageManager.PERMISSION_GRANTED
@@ -212,6 +249,11 @@ class MainActivity : AppCompatActivity(){
                 this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
         }
         cameraExecutor = Executors.newSingleThreadExecutor()
+
+        // 接收音频输入
+        var mStartRecording = true
+        onRecord(mStartRecording)
+        mStartRecording = !mStartRecording
     }
 
     override fun onRequestPermissionsResult(
@@ -228,6 +270,12 @@ class MainActivity : AppCompatActivity(){
                 finish()
             }
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        recorder?.release()
+        recorder = null
     }
 
     override fun onDestroy() {
