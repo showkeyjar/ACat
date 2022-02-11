@@ -25,3 +25,5 @@ pip install nengo (no use yet)
 1. if entropy stay same how to react;
 
 2. if reward stay same how to react.
+
+3. a simulate of animals neural brain.

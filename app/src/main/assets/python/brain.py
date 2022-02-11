@@ -102,7 +102,7 @@ class Brain:
         attention = self.attention
         src_entropy = np.mean(entropy(np_array))
         # print("get entropy: " + str(src_entropy))
-        # 实际发现 0.04 比较好
+        # todo 信息熵阈值动态设置 目前发现 0.04 比较好
         if abs(src_entropy - self.frame_entropy) < 0.04:
             self.temp_memory.append(np_array)
             self.attention = self.attention / 0.8

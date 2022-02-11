@@ -153,8 +153,8 @@ class MainActivity : AppCompatActivity(){
                     }, applicationContext))
                 }
 
-            // Select back camera as a default
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+            // Select front camera as a default
+            val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
 
             try {
                 // Unbind use cases before rebinding
@@ -417,6 +417,9 @@ class MainActivity : AppCompatActivity(){
         return catPlay(id)
     }
 
+    /**
+     * 逐帧动画
+     */
     private fun startAnimation(temp: Array<Any>?) {
         //一个新线程
         object : Thread() {
