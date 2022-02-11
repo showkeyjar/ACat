@@ -20,7 +20,6 @@ import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.content.PackageManagerCompat.LOG_TAG
 import androidx.core.content.res.ResourcesCompat
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
@@ -99,9 +98,8 @@ class MainActivity : AppCompatActivity(){
             return data // Return the byte array
         }
 
-        private fun byteArrayToString(inputFace: ByteArray):String{
-            val encodedString: String = Base64.encodeToString(inputFace, Base64.DEFAULT)
-            return encodedString
+        private fun byteArrayToString(inputFace: ByteArray): String {
+            return Base64.encodeToString(inputFace, Base64.DEFAULT)
         }
 
         override fun analyze(image: ImageProxy) {
@@ -144,17 +142,17 @@ class MainActivity : AppCompatActivity(){
 //                .also {
 //                    it.setSurfaceProvider(viewBinding.viewFinder.surfaceProvider)
 //                }
-            var prevAction:Int=0
+            var prevAction = 0
             // 系统默认 YUV420_888 格式介绍: https://www.jianshu.com/p/944ede616261 使用 setOutputImageFormat转换格式
             val imageAnalyzer = ImageAnalysis.Builder()
                 .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
                 .build()
                 .also {
-                    it.setAnalyzer(cameraExecutor, LuminosityAnalyzer({ luma ->
+                    it.setAnalyzer(cameraExecutor, LuminosityAnalyzer({ signal ->
                         // Log.d(TAG, "brain action: $luma")
-                        if(luma!=prevAction){
-                            reAction(luma)
-                            prevAction = luma
+                        if(signal!=prevAction){
+                            reAction(signal)
+                            prevAction = signal
                         }
                     }, applicationContext))
                 }
@@ -181,13 +179,11 @@ class MainActivity : AppCompatActivity(){
             setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
             setOutputFile("/dev/null")
             setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
-
             try {
                 prepare()
             } catch (e: IOException) {
                 Log.e("sound", "prepare() failed")
             }
-
             start()
         }
     }
@@ -251,9 +247,8 @@ class MainActivity : AppCompatActivity(){
         cameraExecutor = Executors.newSingleThreadExecutor()
 
         // 接收音频输入
-        var mStartRecording = true
-        onRecord(mStartRecording)
-        mStartRecording = !mStartRecording
+        // var mStartRecording = true
+        // onRecord(mStartRecording) // 加入后会导致应用崩溃
     }
 
     override fun onRequestPermissionsResult(
@@ -352,7 +347,7 @@ class MainActivity : AppCompatActivity(){
     }
 
     /**
-     * 绘制图`片
+     * 绘制图片
      *
      */
     private fun drawBitmap(id: Int) {
@@ -425,8 +420,13 @@ class MainActivity : AppCompatActivity(){
         if (isPlaying) {
             return
         }
+        var express = false
         index = actionIndex
-        when(actionIndex){
+        if(index > 6){
+            express = true
+            index -= 6
+        }
+        when(index){
             0 -> {
                 temp = cymbal
             }
@@ -447,7 +447,7 @@ class MainActivity : AppCompatActivity(){
             }
             else -> return
         }
-        startAnimation(temp)
+        startAnimation(temp, expression=express)
     }
 
     /**
@@ -468,37 +468,54 @@ class MainActivity : AppCompatActivity(){
     /**
      * 逐帧动画
      */
-    private fun startAnimation(temp: Array<Any>?) {
+    private fun startAnimation(temp: Array<Any>?, expression: Boolean=false) {
         //一个新线程
         object : Thread() {
             override fun run() {
                 isPlaying = true
-                // Timer().schedule 会报错
-                Executors.newSingleThreadScheduledExecutor().schedule({
-                    //播放声音
-                    val id = soundIds!![index]
-                    //播放声音 ，
-                    // 参数1 是 声音池的id，参数2左声道，参数3右声道，参数5是循环参数
-                    //参数 4 播放优先级，参数6比特率
-                    soundPool!!.play(id, 1f, 1f, 1, 0, 1f)
-                }, delay[index].toLong(), TimeUnit.MILLISECONDS)
-
+                if(!expression) {
+                    // Timer().schedule 会报错
+                    Executors.newSingleThreadScheduledExecutor().schedule({
+                        //播放声音
+                        val id = soundIds!![index]
+                        //播放声音 ，
+                        // 参数1 是 声音池的id，参数2左声道，参数3右声道，参数5是循环参数
+                        //参数 4 播放优先级，参数6比特率
+                        soundPool!!.play(id, 1f, 1f, 1, 0, 1f)
+                    }, delay[index].toLong(), TimeUnit.MILLISECONDS)
+                }
                 //获取应用包名
                 val pgkName = packageName
-                for (i in 0 until temp!![1] as Int) {
-
+                var playNum = temp!![1] as Int
+                if(expression){
+                    playNum = 4
+                }
+                for (i in 0 until playNum) {
                     //资源名
                     val name = if (i < 10) temp[0].toString() + 0 + i else temp[0].toString() + i
-
                     //获取资源id 参数1 资源名(无后缀)，参数2 哪个文件夹，参数3 包名
                     val rId = resources!!.getIdentifier(name, "mipmap", pgkName)
                     drawBitmap(rId)
-
                     //睡眠60ms
                     try {
                         sleep(60)
                     } catch (e: InterruptedException) {
                         e.printStackTrace()
+                    }
+                }
+                if(expression){
+                    for (j in 0 until playNum) {
+                        val i = playNum - j
+                        val name = if (i < 10) temp[0].toString() + 0 + i else temp[0].toString() + i
+                        //获取资源id 参数1 资源名(无后缀)，参数2 哪个文件夹，参数3 包名
+                        val rId = resources!!.getIdentifier(name, "mipmap", pgkName)
+                        drawBitmap(rId)
+                        //睡眠60ms
+                        try {
+                            sleep(60)
+                        } catch (e: InterruptedException) {
+                            e.printStackTrace()
+                        }
                     }
                 }
                 isPlaying = false

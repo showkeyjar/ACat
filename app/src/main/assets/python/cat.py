@@ -17,7 +17,7 @@ def see_rgba(str_rgba):
     接收 RGBA 格式的数据
     """
     global see_frequency, see_tick
-    react = 10
+    react = 20
     if see_tick % see_frequency == 0:
         try:
             decode_r = base64.b64decode(str_rgba)
@@ -26,7 +26,7 @@ def see_rgba(str_rgba):
             # print("find rgba: " + str(np_array.shape))
             react, attention = cat_brain.play(np_array)
             # attention 暂不使用
-            if react < 10:
+            if react < 20:
                 print("get react: " + str(react) + ", attention: " + str(attention))
         except Exception as e:
             print(e)

@@ -12,6 +12,8 @@ Simulating a kitten's brain using an entropy processor
 
 2.Receive user click interaction
 
+3.Cat's expression
+
 ## Install
 
 download apk file and install

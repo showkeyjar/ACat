@@ -61,6 +61,7 @@ class Brain:
     frame_entropy = 0   # 信息熵
     prev_index = 0    # 上一次scence的index, 用于计算reward
     prev_entropy = None
+    express = 12    # 小猫的表达能力
     """
     记忆的结构: 场景, 反馈, 奖励
     memories = [{"frames":[np.array(640, 480, 4)], "reacts": [list], "rewards": [list]}]
@@ -97,7 +98,7 @@ class Brain:
         """
         np_array = np_array.reshape(640, 480, 4, -1)
         rewards = None
-        cat_react = 10
+        cat_react = self.express + 1
         src_entropies = []
         attention = self.attention
         src_entropy = np.mean(entropy(np_array))
@@ -148,9 +149,9 @@ class Brain:
         反馈
         """
         if sence["reacts"] is None:
-            action_list = list(range(6))
+            action_list = list(range(self.express))
         else:
-            action_list = [a for a in range(6) if a not in sence["reacts"]]
+            action_list = [a for a in range(self.express) if a not in sence["reacts"]]
             action_list = action_list + [react * reward for react, reward in zip(sence["reacts"], sence["rewards"])]
         reaction = random.choice(action_list)
         return reaction
