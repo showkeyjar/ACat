@@ -1,7 +1,10 @@
 package com.another.tom
 
 import android.Manifest
+import android.app.AlertDialog
+import android.app.Dialog
 import android.content.Context
+import android.content.DialogInterface
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.PixelFormat
@@ -11,12 +14,21 @@ import android.media.MediaRecorder
 import android.media.SoundPool
 import android.os.Build
 import android.os.Bundle
+import android.text.Html
+import android.text.Html.FROM_HTML_MODE_LEGACY
+import android.text.Spanned
+import android.text.SpannedString
 import android.util.Base64
 import android.util.Log
-import android.view.*
+import android.view.MotionEvent
+import android.view.SurfaceHolder
+import android.view.SurfaceView
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.camera.core.*
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -28,12 +40,14 @@ import java.nio.ByteBuffer
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import kotlin.collections.ArrayList
 
-typealias LumaListener = (luma: Int) -> Unit
+
+typealias LumaListener = (signal: Int) -> Unit
 
 
 class MainActivity : AppCompatActivity(){
+    val PREFS_NAME = "user_conditions"
+
     private var sv: SurfaceView? = null
     //SurfaceView的句柄 控制 SurfaceView ； 持有，查找 等
     private var holder: SurfaceHolder? = null
@@ -75,6 +89,36 @@ class MainActivity : AppCompatActivity(){
     private var index = 0
     //每个项的声音延迟  毫秒  按每项的顺序
     private val delay = intArrayOf(0, 2000, 1000, 200, 5000, 2000, 0)
+
+    override fun onCreateDialog(id: Int): Dialog? {
+        // show disclaimer....
+        // for example, you can show a dialog box...
+        val builder: AlertDialog.Builder = AlertDialog.Builder(this)
+        val disclaimer: Spanned = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            Html.fromHtml(getString(R.string.disclaimer), FROM_HTML_MODE_LEGACY)
+        } else {
+            SpannedString(Html.fromHtml(getString(R.string.disclaimer)))
+        }
+        builder.setMessage(disclaimer)
+            .setCancelable(false)
+            .setPositiveButton(
+                "Agree",
+                DialogInterface.OnClickListener { dialog, id -> // and, if the user accept, you can execute something like this:
+                    // We need an Editor object to make preference changes.
+                    // All objects are from android.context.Context
+                    val settings = getSharedPreferences(PREFS_NAME, 0)
+                    val editor = settings.edit()
+                    editor.putBoolean("accepted", true)
+                    // Commit the edits!
+                    editor.commit()
+                })
+            .setNegativeButton("Disagree",
+                DialogInterface.OnClickListener { dialog, id ->
+                    // nm.cancel(R.notification.running) // cancel the NotificationManager (icon)
+                    System.exit(0)
+                })
+        return builder.create()
+    }
 
     /*
     https://developer.android.com/codelabs/camerax-getting-started?hl=zh-cn#5
@@ -219,36 +263,44 @@ class MainActivity : AppCompatActivity(){
         //加载布局文件 设置显示的内容
         setContentView(R.layout.activity_main)
 
-        //通过id查找视图 只会在上面设置的内容中查找  surfaceView 特点必须自己先创建完 才能执行 ，可以通过句柄得知是否初始化完成
-        sv = findViewById<View>(R.id.surface) as SurfaceView
-        holder = sv!!.holder as SurfaceHolder
-        //添加回调
-        (holder as SurfaceHolder).addCallback(callback)
+        val settings = getSharedPreferences(PREFS_NAME, 0)
+        val accepted = settings.getBoolean("accepted", false)
 
-        //参数1 最多几个声音 参数2 声音类型 AudioManager是声音管理 各种静态类型
-        soundPool = SoundPool.Builder().setMaxStreams(7).build()
-        //遍历音频资源数组 加载到声音池
-        Log.e("tag", "======init=========$soundPool")
-        for (a in resids) {
-            //加载一个声音，加载到声音池 参数1 上下文，参数2. 音频资源id  参数3 播放的优先级\
-            //返回一个 id 音频在声音池的id
-            val id = soundPool!!.load(this@MainActivity, a, 1)
-            //将声音池的id添加到 集合
-            soundIds?.add(id)
+        if( accepted ){
+
+            //通过id查找视图 只会在上面设置的内容中查找  surfaceView 特点必须自己先创建完 才能执行 ，可以通过句柄得知是否初始化完成
+            sv = findViewById<View>(R.id.surface) as SurfaceView
+            holder = sv!!.holder as SurfaceHolder
+            //添加回调
+            (holder as SurfaceHolder).addCallback(callback)
+
+            //参数1 最多几个声音 参数2 声音类型 AudioManager是声音管理 各种静态类型
+            soundPool = SoundPool.Builder().setMaxStreams(7).build()
+            //遍历音频资源数组 加载到声音池
+            Log.e("tag", "======init=========$soundPool")
+            for (a in resids) {
+                //加载一个声音，加载到声音池 参数1 上下文，参数2. 音频资源id  参数3 播放的优先级\
+                //返回一个 id 音频在声音池的id
+                val id = soundPool!!.load(this@MainActivity, a, 1)
+                //将声音池的id添加到 集合
+                soundIds?.add(id)
+            }
+
+            // Request camera permissions
+            if (allPermissionsGranted()) {
+                startCamera()
+            } else {
+                ActivityCompat.requestPermissions(
+                    this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
+            }
+            cameraExecutor = Executors.newSingleThreadExecutor()
+
+            // 接收音频输入
+            // var mStartRecording = true
+            // onRecord(mStartRecording) // 加入后会导致应用崩溃
+        }else{
+            showDialog(0)
         }
-
-        // Request camera permissions
-        if (allPermissionsGranted()) {
-            startCamera()
-        } else {
-            ActivityCompat.requestPermissions(
-                this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
-        }
-        cameraExecutor = Executors.newSingleThreadExecutor()
-
-        // 接收音频输入
-        // var mStartRecording = true
-        // onRecord(mStartRecording) // 加入后会导致应用崩溃
     }
 
     override fun onRequestPermissionsResult(
