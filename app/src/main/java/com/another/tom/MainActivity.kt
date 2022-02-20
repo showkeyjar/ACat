@@ -102,7 +102,7 @@ class MainActivity : AppCompatActivity(){
         builder.setMessage(disclaimer)
             .setCancelable(false)
             .setPositiveButton(
-                "Agree",
+                getString(R.string.btn_agree),
                 DialogInterface.OnClickListener { dialog, id -> // and, if the user accept, you can execute something like this:
                     // We need an Editor object to make preference changes.
                     // All objects are from android.context.Context
@@ -112,7 +112,7 @@ class MainActivity : AppCompatActivity(){
                     // Commit the edits!
                     editor.commit()
                 })
-            .setNegativeButton("Disagree",
+            .setNegativeButton(getString(R.string.btn_disagree),
                 DialogInterface.OnClickListener { dialog, id ->
                     // nm.cancel(R.notification.running) // cancel the NotificationManager (icon)
                     System.exit(0)

@@ -83,4 +83,7 @@ dependencies {
 
     implementation "androidx.camera:camera-view:${camerax_version}"
     implementation "androidx.camera:camera-extensions:${camerax_version}"
+
+    implementation  'com.umeng.umsdk:common:9.4.2'// 必选
+    implementation  'com.umeng.umsdk:asms:1.4.0'// 必选
 }

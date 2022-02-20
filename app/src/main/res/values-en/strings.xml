@@ -2,4 +2,6 @@
 <resources>
     <string name="app_name">Tomcat</string>
     <string name="disclaimer"><![CDATA[Disclaimer\n You must agree to the following terms to use this app:\n 1.This application is a green open source application, and it is strictly prohibited to use this application for or indirectly for commercial purposes;\n 2.All appearance and functional design interpretation rights in this application belong to the developer;\n 3.This app does not collect any user privacy data. In order to improve the user experience, only Umeng code is used to collect the user\'s usage information;]]></string>
+    <string name="btn_agree">Agree</string>
+    <string name="btn_disagree">Disagree</string>
 </resources>

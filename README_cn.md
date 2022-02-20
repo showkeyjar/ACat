@@ -28,5 +28,15 @@ python 3.8
 
 [猫脑的设计](./app/src/main/assets/python/readme.md)
 
+## todo
+
+使用 https://github.com/the3deers/android-3D-model-viewer/ 加载 3d 模型并互动
+
+https://github.com/dbrant/ModelViewer3D
+
+模仿使用：
+
+https://github.com/MVIG-SJTU/AlphaPose
+
 
 欢迎试用和领养!
