@@ -38,5 +38,9 @@ https://github.com/dbrant/ModelViewer3D
 
 https://github.com/MVIG-SJTU/AlphaPose
 
+自动更新：
+
+https://developer.android.com/guide/playcore/in-app-updates/kotlin-java
+
 
 欢迎试用和领养!
