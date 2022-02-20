@@ -35,6 +35,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
+import com.umeng.commonsdk.UMConfigure
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.util.concurrent.ExecutorService
@@ -301,6 +302,9 @@ class MainActivity : AppCompatActivity(){
         }else{
             showDialog(0)
         }
+
+        UMConfigure.preInit(this, "620ca9e3226836222741786e", "Umeng")
+        UMConfigure.init(this, "620ca9e3226836222741786e", "Umeng", UMConfigure.DEVICE_TYPE_PHONE, "")
     }
 
     override fun onRequestPermissionsResult(
