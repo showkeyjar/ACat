@@ -226,10 +226,11 @@ class MainActivity : AppCompatActivity(){
     private fun startRecording() {
         recorder = MediaRecorder().apply {
             setAudioSource(MediaRecorder.AudioSource.MIC)
+            setMaxDuration(10000)
             // setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
             setOutputFormat(MediaRecorder.OutputFormat.DEFAULT)
             // setOutputFile("/dev/null")
-            setOutputFile(externalCacheDir!!.absolutePath + File.separator + "test.mp3")
+            setOutputFile(externalCacheDir!!.absolutePath + File.separator + "recently.mp3")
             // setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
             setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
             try {
