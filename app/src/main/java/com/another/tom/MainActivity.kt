@@ -14,6 +14,7 @@ import android.media.MediaRecorder
 import android.media.SoundPool
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.text.Html
 import android.text.Html.FROM_HTML_MODE_LEGACY
 import android.text.Spanned
@@ -36,6 +37,10 @@ import androidx.core.content.res.ResourcesCompat
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 import com.umeng.commonsdk.UMConfigure
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import java.io.File
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.util.concurrent.ExecutorService
@@ -48,7 +53,7 @@ typealias LumaListener = (signal: Int) -> Unit
 
 class MainActivity : AppCompatActivity(){
     val PREFS_NAME = "user_conditions"
-
+    private val coroutineScope = CoroutineScope( Dispatchers.Main )
     private var sv: SurfaceView? = null
     //SurfaceView的句柄 控制 SurfaceView ； 持有，查找 等
     private var holder: SurfaceHolder? = null
@@ -221,9 +226,12 @@ class MainActivity : AppCompatActivity(){
     private fun startRecording() {
         recorder = MediaRecorder().apply {
             setAudioSource(MediaRecorder.AudioSource.MIC)
-            setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
-            setOutputFile("/dev/null")
-            setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
+            // setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
+            setOutputFormat(MediaRecorder.OutputFormat.DEFAULT)
+            // setOutputFile("/dev/null")
+            setOutputFile(externalCacheDir!!.absolutePath + File.separator + "test.mp3")
+            // setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
+            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
             try {
                 prepare()
             } catch (e: IOException) {
@@ -264,29 +272,28 @@ class MainActivity : AppCompatActivity(){
         //加载布局文件 设置显示的内容
         setContentView(R.layout.activity_main)
 
+        //通过id查找视图 只会在上面设置的内容中查找  surfaceView 特点必须自己先创建完 才能执行 ，可以通过句柄得知是否初始化完成
+        sv = findViewById<View>(R.id.surface) as SurfaceView
+        holder = sv!!.holder as SurfaceHolder
+        //添加回调
+        (holder as SurfaceHolder).addCallback(callback)
+
+        //参数1 最多几个声音 参数2 声音类型 AudioManager是声音管理 各种静态类型
+        soundPool = SoundPool.Builder().setMaxStreams(7).build()
+        //遍历音频资源数组 加载到声音池
+        Log.e("tag", "======init=========$soundPool")
+        for (a in resids) {
+            //加载一个声音，加载到声音池 参数1 上下文，参数2. 音频资源id  参数3 播放的优先级\
+            //返回一个 id 音频在声音池的id
+            val id = soundPool!!.load(this@MainActivity, a, 1)
+            //将声音池的id添加到 集合
+            soundIds?.add(id)
+        }
+
         val settings = getSharedPreferences(PREFS_NAME, 0)
         val accepted = settings.getBoolean("accepted", false)
 
         if( accepted ){
-
-            //通过id查找视图 只会在上面设置的内容中查找  surfaceView 特点必须自己先创建完 才能执行 ，可以通过句柄得知是否初始化完成
-            sv = findViewById<View>(R.id.surface) as SurfaceView
-            holder = sv!!.holder as SurfaceHolder
-            //添加回调
-            (holder as SurfaceHolder).addCallback(callback)
-
-            //参数1 最多几个声音 参数2 声音类型 AudioManager是声音管理 各种静态类型
-            soundPool = SoundPool.Builder().setMaxStreams(7).build()
-            //遍历音频资源数组 加载到声音池
-            Log.e("tag", "======init=========$soundPool")
-            for (a in resids) {
-                //加载一个声音，加载到声音池 参数1 上下文，参数2. 音频资源id  参数3 播放的优先级\
-                //返回一个 id 音频在声音池的id
-                val id = soundPool!!.load(this@MainActivity, a, 1)
-                //将声音池的id添加到 集合
-                soundIds?.add(id)
-            }
-
             // Request camera permissions
             if (allPermissionsGranted()) {
                 startCamera()
@@ -296,15 +303,17 @@ class MainActivity : AppCompatActivity(){
             }
             cameraExecutor = Executors.newSingleThreadExecutor()
 
-            // 接收音频输入
-            // var mStartRecording = true
-            // onRecord(mStartRecording) // 加入后会导致应用崩溃
+            coroutineScope.launch {
+                //接收音频输入
+                var mStartRecording = true
+                onRecord(mStartRecording) // 加入后会导致应用崩溃
+            }
+
+            UMConfigure.preInit(this, "620ca9e3226836222741786e", "Umeng")
+            UMConfigure.init(this, "620ca9e3226836222741786e", "Umeng", UMConfigure.DEVICE_TYPE_PHONE, "")
         }else{
             showDialog(0)
         }
-
-        UMConfigure.preInit(this, "620ca9e3226836222741786e", "Umeng")
-        UMConfigure.init(this, "620ca9e3226836222741786e", "Umeng", UMConfigure.DEVICE_TYPE_PHONE, "")
     }
 
     override fun onRequestPermissionsResult(
@@ -368,7 +377,7 @@ class MainActivity : AppCompatActivity(){
             //目标矩形 画布上的矩形
             dst = Rect(0, 0, svWidth, svHeight)
 
-            drawBitmap(R.mipmap.cymbal_12)
+            drawBitmap(R.mipmap.cymbal_12, holder)
             Log.e("tag", "============over=============")
         }
 
@@ -406,11 +415,10 @@ class MainActivity : AppCompatActivity(){
      * 绘制图片
      *
      */
-    private fun drawBitmap(id: Int) {
+    private fun drawBitmap(id: Int, holder: SurfaceHolder?) {
         //锁定并拿到画布
         val canvas = holder!!.lockCanvas()
         val bmp = getBitmap(id)
-
         //获取位图的像素宽高
         val bmpWidth = bmp.width
         val bmpHeight = bmp.height
@@ -469,7 +477,7 @@ class MainActivity : AppCompatActivity(){
             }
             else -> return
         }
-        startAnimation(temp)
+        startAnimation(temp, holder)
     }
 
     private fun reAction(actionIndex:Int){
@@ -503,7 +511,7 @@ class MainActivity : AppCompatActivity(){
             }
             else -> return
         }
-        startAnimation(temp, expression=express)
+        startAnimation(temp, holder, expression=express)
     }
 
     /**
@@ -524,7 +532,7 @@ class MainActivity : AppCompatActivity(){
     /**
      * 逐帧动画
      */
-    private fun startAnimation(temp: Array<Any>?, expression: Boolean=false) {
+    private fun startAnimation(temp: Array<Any>?, holder: SurfaceHolder?, expression: Boolean=false) {
         //一个新线程
         object : Thread() {
             override fun run() {
@@ -551,7 +559,7 @@ class MainActivity : AppCompatActivity(){
                     val name = if (i < 10) temp[0].toString() + 0 + i else temp[0].toString() + i
                     //获取资源id 参数1 资源名(无后缀)，参数2 哪个文件夹，参数3 包名
                     val rId = resources!!.getIdentifier(name, "mipmap", pgkName)
-                    drawBitmap(rId)
+                    drawBitmap(rId, holder)
                     //睡眠60ms
                     try {
                         sleep(60)
@@ -565,7 +573,7 @@ class MainActivity : AppCompatActivity(){
                         val name = if (i < 10) temp[0].toString() + 0 + i else temp[0].toString() + i
                         //获取资源id 参数1 资源名(无后缀)，参数2 哪个文件夹，参数3 包名
                         val rId = resources!!.getIdentifier(name, "mipmap", pgkName)
-                        drawBitmap(rId)
+                        drawBitmap(rId, holder)
                         //睡眠60ms
                         try {
                             sleep(60)
@@ -588,7 +596,6 @@ class MainActivity : AppCompatActivity(){
      * @return
      */
     override fun onTouchEvent(event: MotionEvent): Boolean {
-
         // 触摸:按下 移动 ，抬起
         if (isPlaying) {
             Toast.makeText(this@MainActivity, "wait a little", Toast.LENGTH_SHORT)
@@ -600,7 +607,7 @@ class MainActivity : AppCompatActivity(){
                 if (count == 5) {
                     count = 0
                     index = 6 //改变下标
-                    startAnimation(knockout)
+                    startAnimation(knockout, holder)
                 }
             }
         }
