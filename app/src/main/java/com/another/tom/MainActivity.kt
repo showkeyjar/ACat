@@ -10,11 +10,12 @@ import android.graphics.Bitmap
 import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.graphics.drawable.BitmapDrawable
+import android.media.AudioFormat
+import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.media.SoundPool
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.text.Html
 import android.text.Html.FROM_HTML_MODE_LEGACY
 import android.text.Spanned
@@ -46,6 +47,7 @@ import java.nio.ByteBuffer
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlin.experimental.and
 
 
 typealias LumaListener = (signal: Int) -> Unit
@@ -223,12 +225,96 @@ class MainActivity : AppCompatActivity(){
         }, ContextCompat.getMainExecutor(this))
     }
 
+    /*
+    https://stackoverflow.com/questions/19145213/android-audio-capture-silence-detection/19752120
+     */
+    open fun ShortToByte(input: ShortArray, elements: Int): ByteArray? {
+        var short_index: Int
+        var byte_index: Int
+        val buffer = ByteArray(elements * 2)
+        byte_index = 0
+        short_index = byte_index
+        while ( /*NOP*/short_index != elements /*NOP*/) {
+            buffer[byte_index] = (input[short_index] and 0x00FF) as Byte
+            buffer[byte_index + 1] = ((input[short_index] and 0xFF00.toShort()) as Int shr 8) as Byte
+            ++short_index
+            byte_index += 2
+        }
+        return buffer
+    }
+
+    open fun searchThreshold(arr: ShortArray, thr: Short): Int {
+        var peakIndex: Int
+        val arrLen = arr.size
+        peakIndex = 0
+        while (peakIndex < arrLen) {
+            if (arr[peakIndex] >= thr || arr[peakIndex] <= -thr) {
+                //se supera la soglia, esci e ritorna peakindex-mezzo kernel.
+                return peakIndex
+            }
+            peakIndex++
+        }
+        return -1 //not found
+    }
+
+    /*
+    保存音频数据
+     */
+    private fun sendDataOnRecord(bytes:ByteArray?){
+
+    }
+
+    private fun listen(audioRecord: AudioRecord, isRecord:Boolean=true){
+        var record = isRecord
+        var threshold: Short = 5000
+        val SILENCE_DEGREE = 15
+
+        val RECORDER_SAMPLERATE = 8000
+        val RECORDER_CHANNELS: Int = AudioFormat.CHANNEL_IN_MONO
+        val RECORDER_AUDIO_ENCODING: Int = AudioFormat.ENCODING_PCM_16BIT
+        //buffer size - need be fixed, established value for IOS compatibility
+        val MIN_SIZE = AudioRecord
+            .getMinBufferSize(
+                RECORDER_SAMPLERATE, RECORDER_CHANNELS,
+                RECORDER_AUDIO_ENCODING
+            )
+        val buffer = ShortArray(MIN_SIZE)
+        var silenceDegree = 0
+        while (record) {
+            val bytesRead = audioRecord?.read(buffer, 0, MIN_SIZE)
+            if (bytesRead != null) {
+                if (bytesRead > 0) {
+                    val foundPeak = searchThreshold(buffer, threshold)
+                    if (foundPeak == -1) {
+                        if (silenceDegree <= SILENCE_DEGREE) {
+                            silenceDegree++
+                        }
+                    } else {
+                        silenceDegree = 0
+                    }
+                    //stoping to send, only when counter became equals SILENCE_DEGREE
+                    if (silenceDegree < SILENCE_DEGREE) {
+                        //SEND USEFUL DATA
+                        sendDataOnRecord(ShortToByte(buffer, bytesRead))
+                    }
+                } else {
+                    if (bytesRead == AudioRecord.ERROR_INVALID_OPERATION) {
+                        // This can happen if there is already an active
+                        // AudioRecord (e.g. in another tab).
+                        record = false
+                    }
+                }
+            }
+        }
+    }
+
     private fun startRecording() {
         recorder = MediaRecorder().apply {
             setAudioSource(MediaRecorder.AudioSource.MIC)
-            setMaxDuration(10000)
             // setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
             setOutputFormat(MediaRecorder.OutputFormat.DEFAULT)
+            // setMaxDuration 根据时间判断录音长度, setMaxFileSize 根据文件大小判断录音长度, 两者都无法实现循环滚动录音
+            setMaxDuration(10000)
             // setOutputFile("/dev/null")
             setOutputFile(externalCacheDir!!.absolutePath + File.separator + "recently.mp3")
             // setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
