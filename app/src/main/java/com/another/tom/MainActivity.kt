@@ -287,7 +287,7 @@ class MainActivity : AppCompatActivity(){
                         val foundPeak = searchThreshold(buffer, threshold)
                         if (foundPeak > -1) { //found signal
                             //record signal
-                            val byteBuffer = ShortToByte(buffer, bufferReadResult)
+                            val byteBuffer = shortToByte(buffer, bufferReadResult)
                             try {
                                 os?.write(byteBuffer)
                             } catch (e: IOException) {
@@ -296,8 +296,6 @@ class MainActivity : AppCompatActivity(){
                         } else { //count the time
                             //don't save signal
                         }
-
-
                         //show results
                         //here, with publichProgress function, if you calculate the total saved samples,
                         //you can optionally show the recorded file length in seconds:      publishProgress(elsapsedTime,0);
@@ -320,25 +318,22 @@ class MainActivity : AppCompatActivity(){
             return null
         } //fine di doInBackground
 
-        fun ShortToByte(input: ShortArray, elements: Int): ByteArray {
-            var short_index: Int
-            var byte_index: Int
+        private fun shortToByte(input: ShortArray, elements: Int): ByteArray {
+            var byteIndex = 0
             val buffer = ByteArray(elements * 2)
-            byte_index = 0
-            short_index = byte_index
-            while ( /*NOP*/short_index != elements /*NOP*/) {
-                buffer[byte_index] = (input[short_index] and 0x00FF).toByte()
-                buffer[byte_index + 1] = ((input[short_index] and 0xFF00.toShort()) as Int shr 8) as Byte
-                ++short_index
-                byte_index += 2
+            var shortIndex = byteIndex
+            while ( /*NOP*/shortIndex != elements /*NOP*/) {
+                buffer[byteIndex] = (input[shortIndex] and 0x00FF).toByte()
+                buffer[byteIndex + 1] = ((input[shortIndex] and 0xFF00.toShort()) as Int shr 8) as Byte
+                ++shortIndex
+                byteIndex += 2
             }
             return buffer
         }
 
-        fun searchThreshold(arr: ShortArray, thr: Short): Int {
-            var peakIndex: Int
+        private fun searchThreshold(arr: ShortArray, thr: Short): Int {
+            var peakIndex = 0
             val arrLen = arr.size
-            peakIndex = 0
             while (peakIndex < arrLen) {
                 if (arr[peakIndex] >= thr || arr[peakIndex] <= -thr) {
                     //se supera la soglia, esci e ritorna peakindex-mezzo kernel.
@@ -383,20 +378,16 @@ class MainActivity : AppCompatActivity(){
         }
 
         private fun copyWaveFile(inFilename: String, outFilename: String) {
-            var `in`: FileInputStream? = null
-            var out: FileOutputStream? = null
-            var totalAudioLen: Long = 0
-            var totalDataLen = totalAudioLen + 36
             val longSampleRate = frequency.toLong()
             val channels = 1
             val byteRate: Long = (RECORDER_BPP * frequency * channels / 8) as Long
             val data = ByteArray(bufferSize)
             try {
-                `in` = FileInputStream(inFilename)
-                out = FileOutputStream(outFilename)
-                totalAudioLen = `in`.getChannel().size()
-                totalDataLen = totalAudioLen + 36
-                WriteWaveFileHeader(
+                var `in` = FileInputStream(inFilename)
+                var out = FileOutputStream(outFilename)
+                var totalAudioLen = `in`.getChannel().size()
+                var totalDataLen = totalAudioLen + 36
+                writeWaveFileHeader(
                     out, totalAudioLen, totalDataLen,
                     longSampleRate, channels, byteRate
                 )
@@ -413,7 +404,7 @@ class MainActivity : AppCompatActivity(){
         }
 
         @Throws(IOException::class)
-        private fun WriteWaveFileHeader(
+        private fun writeWaveFileHeader(
             out: FileOutputStream?, totalAudioLen: Long,
             totalDataLen: Long, longSampleRate: Long, channels: Int,
             byteRate: Long
@@ -463,9 +454,7 @@ class MainActivity : AppCompatActivity(){
             header[41] = (totalAudioLen shr 8 and 0xff).toByte()
             header[42] = (totalAudioLen shr 16 and 0xff).toByte()
             header[43] = (totalAudioLen shr 24 and 0xff).toByte()
-            if (out != null) {
-                out.write(header, 0, 44)
-            }
+            out?.write(header, 0, 44)
         }
     } //Fine Classe RecordAudio (AsyncTask)
 
