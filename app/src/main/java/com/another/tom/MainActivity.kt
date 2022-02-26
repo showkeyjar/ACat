@@ -233,7 +233,7 @@ class MainActivity : AppCompatActivity(){
         private val TAG: String? = "listen"
         private val RECORDER_BPP = 16
         private val AUDIO_RECORDER_FILE_EXT_WAV = ".wav"
-        private val AUDIO_RECORDER_FOLDER = "AudioRecorder"
+        private val AUDIO_RECORDER_FOLDER = "com.another.tom"
         private val AUDIO_RECORDER_TEMP_FILE = "record_temp.raw"
 
         var audioRecord:AudioRecord? = null
