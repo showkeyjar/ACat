@@ -9,6 +9,9 @@
     android:keepScreenOn="true"
     tools:context=".MainActivity">
 
+    <FrameLayout android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fitsSystemWindows="true">
     <!--布局：
              RelativeLayout 相对布局
              FrameLayout    ：帧布局
@@ -53,7 +56,6 @@
         android:layout_gravity="bottom|center_horizontal"
         android:gravity="right"
         >
-
 
         <!--图片空间-->
         <!--
@@ -123,5 +125,6 @@
 <!--        android:layout_width="96dp"-->
 <!--        android:layout_height="160dp"-->
 <!--        android:layout_margin="8dp" />-->
+    </FrameLayout>
 
 </FrameLayout>
