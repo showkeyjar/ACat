@@ -10,11 +10,11 @@ import android.graphics.Bitmap
 import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.graphics.drawable.BitmapDrawable
+import android.media.AudioFormat
+import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.media.SoundPool
-import android.os.Build
-import android.os.Bundle
-import android.os.Environment
+import android.os.*
 import android.text.Html
 import android.text.Html.FROM_HTML_MODE_LEGACY
 import android.text.Spanned
@@ -40,12 +40,13 @@ import com.umeng.commonsdk.UMConfigure
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.io.File
-import java.io.IOException
+import java.io.*
 import java.nio.ByteBuffer
+import java.util.Collections.frequency
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlin.experimental.and
 
 
 typealias LumaListener = (signal: Int) -> Unit
@@ -135,7 +136,6 @@ class MainActivity : AppCompatActivity(){
     */
     // private lateinit var viewBinding: ActivityMainBinding
     private lateinit var cameraExecutor: ExecutorService
-    private var recorder: MediaRecorder? = null
 
     private class LuminosityAnalyzer(private val listener: LumaListener, private val con:Context) : ImageAnalysis.Analyzer {
         private lateinit var py: Python
@@ -223,36 +223,267 @@ class MainActivity : AppCompatActivity(){
         }, ContextCompat.getMainExecutor(this))
     }
 
-    private fun startRecording() {
-        recorder = MediaRecorder().apply {
-            setAudioSource(MediaRecorder.AudioSource.MIC)
-            // setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
-            setOutputFormat(MediaRecorder.OutputFormat.DEFAULT)
-            // setOutputFile("/dev/null")
-            setOutputFile(externalCacheDir!!.absolutePath + File.separator + "test.mp3")
-            // setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
-            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+    /*
+    https://stackoverflow.com/questions/19145213/android-audio-capture-silence-detection/19752120
+     */
+    var audioStarted = false
+    var recordTask: RecordAudio? = null
+
+    class RecordAudio(private val started:Boolean, private val context: Context) : AsyncTask<Void?, Double?, Void?>() {
+        private val TAG: String? = "listen"
+        private val RECORDER_BPP = 16
+        private val AUDIO_RECORDER_FILE_EXT_WAV = ".wav"
+        private val AUDIO_RECORDER_FOLDER = "com.another.tom"
+        private val AUDIO_RECORDER_TEMP_FILE = "record_temp.raw"
+
+        var audioRecord:AudioRecord? = null
+        var bufferSize = 0
+        var frequency = 44100 //8000;
+
+        var channelConfiguration: Int = AudioFormat.CHANNEL_IN_MONO
+        var audioEncoding: Int = AudioFormat.ENCODING_PCM_16BIT
+
+        var threshold: Short = 15000
+        var os: FileOutputStream? = null
+
+        override fun doInBackground(vararg arg0: Void?): Void? {
+            Log.w(TAG, "doInBackground")
             try {
-                prepare()
-            } catch (e: IOException) {
-                Log.e("sound", "prepare() failed")
+                val filename = getTempFilename()
+                try {
+                    os = FileOutputStream(filename)
+                } catch (e: FileNotFoundException) {
+                    e.printStackTrace()
+                }
+                bufferSize = AudioRecord.getMinBufferSize(
+                    frequency,
+                    channelConfiguration, audioEncoding
+                )
+                if (ActivityCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.RECORD_AUDIO
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    // TODO: Consider calling
+                    //    ActivityCompat#requestPermissions
+                    // here to request the missing permissions, and then overriding
+                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                    //                                          int[] grantResults)
+                    // to handle the case where the user grants the permission. See the documentation
+                    // for ActivityCompat#requestPermissions for more details.
+                    return null
+                }
+                audioRecord = AudioRecord(
+                    MediaRecorder.AudioSource.MIC, frequency,
+                    channelConfiguration, audioEncoding, bufferSize
+                )
+                val buffer = ShortArray(bufferSize)
+                audioRecord?.startRecording()
+                while (started) {
+                    val bufferReadResult = audioRecord!!.read(buffer, 0, bufferSize)
+                    if (AudioRecord.ERROR_INVALID_OPERATION != bufferReadResult) {
+                        //check signal
+                        //put a threshold
+                        val foundPeak = searchThreshold(buffer, threshold)
+                        if (foundPeak > -1) { //found signal
+                            //record signal
+                            val byteBuffer = shortToByte(buffer, bufferReadResult)
+                            try {
+                                os?.write(byteBuffer)
+                            } catch (e: IOException) {
+                                e.printStackTrace()
+                            }
+                        } else { //count the time
+                            //don't save signal
+                        }
+                        //show results
+                        //here, with publichProgress function, if you calculate the total saved samples,
+                        //you can optionally show the recorded file length in seconds:      publishProgress(elsapsedTime,0);
+                    }
+                }
+                audioRecord!!.stop()
+
+                //close file
+                try {
+                    os?.close()
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                }
+                copyWaveFile(getTempFilename(), getFilename())
+                deleteTempFile()
+            } catch (t: Throwable) {
+                t.printStackTrace()
+                Log.e("AudioRecord", "Recording Failed")
             }
-            start()
+            return null
+        } //fine di doInBackground
+
+        private fun shortToByte(input: ShortArray, elements: Int): ByteArray {
+            var byteIndex = 0
+            val buffer = ByteArray(elements * 2)
+            var shortIndex = byteIndex
+            while ( /*NOP*/shortIndex != elements /*NOP*/) {
+                buffer[byteIndex] = (input[shortIndex] and 0x00FF).toByte()
+                buffer[byteIndex + 1] = ((input[shortIndex] and 0xFF00.toShort()) as Int shr 8) as Byte
+                ++shortIndex
+                byteIndex += 2
+            }
+            return buffer
+        }
+
+        private fun searchThreshold(arr: ShortArray, thr: Short): Int {
+            var peakIndex = 0
+            val arrLen = arr.size
+            while (peakIndex < arrLen) {
+                if (arr[peakIndex] >= thr || arr[peakIndex] <= -thr) {
+                    //se supera la soglia, esci e ritorna peakindex-mezzo kernel.
+                    return peakIndex
+                }
+                peakIndex++
+            }
+            return -1 //not found
+        }
+
+        /*
+    @Override
+    protected void onProgressUpdate(Double... values) {
+        DecimalFormat sf = new DecimalFormat("000.0000");
+        elapsedTimeTxt.setText(sf.format(values[0]));
+
+    }
+    */
+        private fun getFilename(): String {
+            val filepath = Environment.getExternalStorageDirectory().path
+            val file = File(filepath, AUDIO_RECORDER_FOLDER)
+            if (!file.exists()) {
+                file.mkdirs()
+            }
+            return file.absolutePath + "/" + System.currentTimeMillis() + AUDIO_RECORDER_FILE_EXT_WAV
+        }
+
+        private fun getTempFilename(): String {
+            val filepath = Environment.getExternalStorageDirectory().path
+            val file = File(filepath, AUDIO_RECORDER_FOLDER)
+            if (!file.exists()) {
+                file.mkdirs()
+            }
+            val tempFile = File(filepath, AUDIO_RECORDER_TEMP_FILE)
+            if (tempFile.exists()) tempFile.delete()
+            return file.absolutePath + "/" + AUDIO_RECORDER_TEMP_FILE
+        }
+
+        private fun deleteTempFile() {
+            val file = File(getTempFilename())
+            file.delete()
+        }
+
+        private fun copyWaveFile(inFilename: String, outFilename: String) {
+            val longSampleRate = frequency.toLong()
+            val channels = 1
+            val byteRate: Long = (RECORDER_BPP * frequency * channels / 8) as Long
+            val data = ByteArray(bufferSize)
+            try {
+                var `in` = FileInputStream(inFilename)
+                var out = FileOutputStream(outFilename)
+                var totalAudioLen = `in`.getChannel().size()
+                var totalDataLen = totalAudioLen + 36
+                writeWaveFileHeader(
+                    out, totalAudioLen, totalDataLen,
+                    longSampleRate, channels, byteRate
+                )
+                while (`in`.read(data) !== -1) {
+                    out.write(data)
+                }
+                `in`.close()
+                out.close()
+            } catch (e: FileNotFoundException) {
+                e.printStackTrace()
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        }
+
+        @Throws(IOException::class)
+        private fun writeWaveFileHeader(
+            out: FileOutputStream?, totalAudioLen: Long,
+            totalDataLen: Long, longSampleRate: Long, channels: Int,
+            byteRate: Long
+        ) {
+            val header = ByteArray(44)
+            header[0] = 'R'.toByte() // RIFF/WAVE header
+            header[1] = 'I'.toByte()
+            header[2] = 'F'.toByte()
+            header[3] = 'F'.toByte()
+            header[4] = (totalDataLen and 0xff).toByte()
+            header[5] = (totalDataLen shr 8 and 0xff).toByte()
+            header[6] = (totalDataLen shr 16 and 0xff).toByte()
+            header[7] = (totalDataLen shr 24 and 0xff).toByte()
+            header[8] = 'W'.toByte()
+            header[9] = 'A'.toByte()
+            header[10] = 'V'.toByte()
+            header[11] = 'E'.toByte()
+            header[12] = 'f'.toByte() // 'fmt ' chunk
+            header[13] = 'm'.toByte()
+            header[14] = 't'.toByte()
+            header[15] = ' '.toByte()
+            header[16] = 16 // 4 bytes: size of 'fmt ' chunk
+            header[17] = 0
+            header[18] = 0
+            header[19] = 0
+            header[20] = 1 // format = 1
+            header[21] = 0
+            header[22] = channels.toByte()
+            header[23] = 0
+            header[24] = (longSampleRate and 0xff).toByte()
+            header[25] = (longSampleRate shr 8 and 0xff).toByte()
+            header[26] = (longSampleRate shr 16 and 0xff).toByte()
+            header[27] = (longSampleRate shr 24 and 0xff).toByte()
+            header[28] = (byteRate and 0xff).toByte()
+            header[29] = (byteRate shr 8 and 0xff).toByte()
+            header[30] = (byteRate shr 16 and 0xff).toByte()
+            header[31] = (byteRate shr 24 and 0xff).toByte()
+            header[32] = (channels * 16 / 8).toByte() // block align
+            header[33] = 0
+            header[34] = RECORDER_BPP.toByte() // bits per sample
+            header[35] = 0
+            header[36] = 'd'.toByte()
+            header[37] = 'a'.toByte()
+            header[38] = 't'.toByte()
+            header[39] = 'a'.toByte()
+            header[40] = (totalAudioLen and 0xff).toByte()
+            header[41] = (totalAudioLen shr 8 and 0xff).toByte()
+            header[42] = (totalAudioLen shr 16 and 0xff).toByte()
+            header[43] = (totalAudioLen shr 24 and 0xff).toByte()
+            out?.write(header, 0, 44)
+        }
+    } //Fine Classe RecordAudio (AsyncTask)
+
+
+    fun resetAquisition() {
+        Log.w(TAG, "resetAquisition")
+        stopAquisition()
+        //startButton.setText("WAIT");
+        startAquisition()
+    }
+
+    fun stopAquisition() {
+        Log.w(TAG, "stopAquisition")
+        if (audioStarted) {
+            audioStarted = false
+            recordTask?.cancel(true)
         }
     }
 
-    private fun stopRecording() {
-        recorder?.apply {
-            stop()
-            release()
-        }
-        recorder = null
-    }
-
-    private fun onRecord(start: Boolean) = if (start) {
-        startRecording()
-    } else {
-        stopRecording()
+    fun startAquisition() {
+        Log.w(TAG, "startAquisition")
+        val handler = Handler()
+        handler.postDelayed(Runnable {
+            //elapsedTime=0;
+            audioStarted = true
+            recordTask = RecordAudio(audioStarted, baseContext)
+            recordTask!!.execute()
+            //startButton.setText("RESET");
+        }, 500)
     }
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
@@ -305,8 +536,9 @@ class MainActivity : AppCompatActivity(){
 
             coroutineScope.launch {
                 //接收音频输入
-                var mStartRecording = true
-                onRecord(mStartRecording) // 加入后会导致应用崩溃
+//                var mStartRecording = true
+//                onRecord(mStartRecording) // 加入后会导致应用崩溃
+                startAquisition()
             }
 
             UMConfigure.preInit(this, "620ca9e3226836222741786e", "Umeng")
@@ -332,15 +564,10 @@ class MainActivity : AppCompatActivity(){
         }
     }
 
-    override fun onStop() {
-        super.onStop()
-        recorder?.release()
-        recorder = null
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         cameraExecutor.shutdown()
+        stopAquisition()
     }
 
     companion object {
@@ -614,4 +841,3 @@ class MainActivity : AppCompatActivity(){
         return super.onTouchEvent(event)
     }
 }
-

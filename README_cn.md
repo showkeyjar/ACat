@@ -42,5 +42,9 @@ https://github.com/MVIG-SJTU/AlphaPose
 
 https://developer.android.com/guide/playcore/in-app-updates/kotlin-java
 
+运行node.js:
+
+https://www.rumblefish.dev/blog/post/how-to-run-nodejs-and-many-others-inside-your-android-app/
+
 
 欢迎试用和领养!

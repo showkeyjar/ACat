@@ -15,3 +15,11 @@
 ## 记忆模块
 
 1.统一的向量空间
+
+## 问题
+
+1.经评估，自行编写PMXLoader的方案在Android端不太可行(主要是目前bullet3不支持android)
+
+2.可尝试使用 Kotlin/JS
+
+https://www.rumblefish.dev/blog/post/how-to-run-nodejs-and-many-others-inside-your-android-app/
